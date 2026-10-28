@@ -1,0 +1,13 @@
+{
+	"appId": "com.alyaman.invoice2",
+	"appName": "اليمان",
+	"webDir": "www",
+	"server": {
+		"androidScheme": "https"
+	},
+	"android": {
+		"allowMixedContent": false,
+		"backgroundColor": "#0F1318"
+	},
+	"overrideUserAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+}
