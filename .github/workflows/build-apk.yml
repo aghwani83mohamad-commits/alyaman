@@ -5,6 +5,9 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -36,3 +39,11 @@ jobs:
         with:
           name: alyaman-apk
           path: android/app/build/outputs/apk/release/*.apk
+
+      - name: Publish APK as a release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/release/*.apk Alyaman.apk
+          TAG="v1.1-build${{ github.run_number }}"
+          gh release create "$TAG" Alyaman.apk --title "اليمان $TAG" --notes "نسخة مع الفتح بالبصمة" --latest
