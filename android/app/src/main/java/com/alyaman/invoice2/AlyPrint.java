@@ -35,6 +35,16 @@ public class AlyPrint {
     }
 
     @JavascriptInterface
+    public void closeApp() {
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                activity.finishAndRemoveTask();
+            }
+        });
+    }
+
+    @JavascriptInterface
     public void printHtml(final String html, final String title) {
         activity.runOnUiThread(new Runnable() {
             @Override

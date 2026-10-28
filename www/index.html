@@ -2063,7 +2063,7 @@ html:not(.ym-tr) #appLock .ll-btn[data-l=ar],html.ym-tr #appLock .ll-btn[data-l=
     </button>
     <button type="button" class="ym-ibtn" id="ymBell" title="التنبيهات" aria-label="التنبيهات"><svg viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span class="tx">التنبيهات</span><span class="ym-dot" id="ymBellDot" style="display:none">0</span></button>
     <button type="button" class="ym-ibtn save" id="ymSaveTop" title="حفظ جميع البيانات" aria-label="حفظ جميع البيانات"><svg viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v6h8V3M8 21v-7h8v7"/></svg><span class="tx">حفظ</span></button>
-    <button type="button" class="ym-ibtn lock" id="ymLockTop" title="قفل البرنامج" aria-label="قفل البرنامج"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><path d="M12 14v3"/></svg><span class="tx">قفل</span></button>
+    <button type="button" class="ym-ibtn lock" id="ymCloseTop" title="إغلاق البرنامج" aria-label="إغلاق البرنامج"><svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><path d="M12 2v10"/></svg><span class="tx">إغلاق</span></button>
 
     <div id="ymPanel" role="dialog" aria-label="قائمة القسم">
       <div class="ym-search">
@@ -2159,8 +2159,8 @@ html:not(.ym-tr) #appLock .ll-btn[data-l=ar],html.ym-tr #appLock .ll-btn[data-l=
       '<circle cx="24" cy="24" r="20" fill="url(#@0)"/><circle cx="24" cy="14.500" r="3.200" fill="#fff"/><rect x="21" y="20.500" width="6" height="16.500" rx="3" fill="#fff"/>'],
     topSave:[['#5aa4ff','#1e40af'],
       '<rect x="5" y="5" width="38" height="38" rx="6" fill="url(#@0)"/><rect x="12" y="5" width="24" height="15" rx="2.500" fill="#e2e8f0"/><rect x="28" y="8" width="5" height="9" rx="1.200" fill="#475569"/><rect x="11" y="26" width="26" height="17" rx="3" fill="#f8fafc"/><path d="M15 31h18M15 36h12" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>'],
-    topLock:[['#fde047','#d97706'],
-      '<path d="M14.500 22v-6.500a9.500 9.500 0 0 1 19 0V22" stroke="#9fb0c4" stroke-width="5" fill="none" stroke-linecap="round"/><rect x="8" y="21" width="32" height="23" rx="5.500" fill="url(#@0)"/><circle cx="24" cy="30.500" r="3.800" fill="#78350f"/><rect x="22.300" y="31.500" width="3.400" height="8" rx="1.700" fill="#78350f"/>']
+    topClose:[['#ff7a7a','#c81e1e'],
+      '<circle cx="24" cy="24" r="21" fill="url(#@0)"/><g transform="translate(24 24) scale(1.05) translate(-12 -12)" stroke="#fff" stroke-width="2.600" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M18.360 6.640a9 9 0 1 1-12.730 0"/><path d="M12 2.500v9.500"/></g>']
   };
   function colIcon(id,pf){
     var d=CI[id]; if(!d) return null;
@@ -2173,7 +2173,7 @@ html:not(.ym-tr) #appLock .ll-btn[data-l=ar],html.ym-tr #appLock .ll-btn[data-l=
     return '<defs>'+defs+'</defs>'+body;
   }
   function topIcons(){
-    [['ymBell','navAlerts'],['ymSaveTop','topSave'],['ymLockTop','topLock']].forEach(function(p){
+    [['ymBell','navAlerts'],['ymSaveTop','topSave'],['ymCloseTop','topClose']].forEach(function(p){
       var el=$(p[0]),sv=el&&el.querySelector('svg'),h=colIcon(p[1],'t');
       if(sv&&h){sv.setAttribute('viewBox','0 0 48 48');sv.setAttribute('class','col');sv.innerHTML=h}
     });
@@ -2312,7 +2312,41 @@ html:not(.ym-tr) #appLock .ll-btn[data-l=ar],html.ym-tr #appLock .ll-btn[data-l=
   }
   proxy('ymSaveTop','btnSaveAllData',false);
   proxy('ymSaveBtm','btnSaveAllData',false);
-  proxy('ymLockTop','lockFloating',true);
+  /* زر الإغلاق: نافذة تأكيد ثم إغلاق التطبيق */
+  function exitApp(){
+    try{ if(window.AlyPrint&&typeof window.AlyPrint.closeApp==='function'){window.AlyPrint.closeApp();return} }catch(e){}
+    try{ var C=window.Capacitor; if(C&&C.Plugins&&C.Plugins.App&&C.Plugins.App.exitApp){C.Plugins.App.exitApp();return} }catch(e){}
+    try{ window.close() }catch(e){}
+  }
+  function askClose(){
+    if($('aly-close-ov')) return;
+    var tr=!!window.__TR, T=function(a,t){return tr?t:a};
+    var st=document.createElement('style'); st.id='aly-close-css';
+    st.textContent='#aly-close-ov{position:fixed;inset:0;z-index:2147483645;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(8,16,28,.62);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);animation:alyFade .18s ease-out;font-family:Cairo,Tajawal,sans-serif}'
+     +'#aly-close-ov .bx{width:min(340px,100%);box-sizing:border-box;padding:26px 22px 20px;text-align:center;color:#17212b;background:linear-gradient(180deg,#fff,#f6f8fa);border:1.5px solid rgba(202,162,77,.6);border-radius:22px;box-shadow:0 24px 60px rgba(0,0,0,.4);animation:alyPop .22s cubic-bezier(.2,.9,.3,1.2)}'
+     +'#aly-close-ov .ic{width:62px;height:62px;margin:0 auto 12px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#ff7a7a,#c81e1e);box-shadow:0 8px 18px rgba(200,30,30,.35)}'
+     +'#aly-close-ov .ic svg{width:30px;height:30px;fill:none;stroke:#fff;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}'
+     +'#aly-close-ov h3{margin:0 0 6px;font-size:20px;font-weight:800}'
+     +'#aly-close-ov p{margin:0 0 18px;font-size:14px;line-height:1.6;color:#64748b}'
+     +'#aly-close-ov .row{display:flex;gap:10px}'
+     +'#aly-close-ov button{flex:1;padding:12px 10px;border:0;border-radius:12px;font:700 15px Cairo,Tajawal,sans-serif;cursor:pointer;transition:transform .12s,filter .12s}'
+     +'#aly-close-ov button:active{transform:scale(.97)}'
+     +'#aly-close-ov .no{background:#e8edf2;color:#17212b}'
+     +'#aly-close-ov .yes{background:linear-gradient(180deg,#ef4444,#b91c1c);color:#fff;box-shadow:0 6px 14px rgba(185,28,28,.3)}'
+     +'@keyframes alyFade{from{opacity:0}to{opacity:1}}@keyframes alyPop{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}';
+    document.head.appendChild(st);
+    var ov=document.createElement('div'); ov.id='aly-close-ov'; ov.setAttribute('role','dialog'); ov.setAttribute('aria-modal','true');
+    ov.innerHTML='<div class="bx"><div class="ic"><svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><path d="M12 2v10"/></svg></div>'
+      +'<h3>'+T('إغلاق البرنامج؟','Uygulama kapatılsın mı?')+'</h3>'
+      +'<p>'+T('سيُغلق البرنامج، وتُطلب كلمة المرور عند فتحه مرة أخرى.','Uygulama kapanacak; yeniden açtığınızda parola istenecek.')+'</p>'
+      +'<div class="row"><button type="button" class="no">'+T('إلغاء','İptal')+'</button><button type="button" class="yes">'+T('إغلاق','Kapat')+'</button></div></div>';
+    function done(){ov.remove();st.remove()}
+    ov.querySelector('.no').onclick=done;
+    ov.querySelector('.yes').onclick=function(){done();exitApp()};
+    ov.addEventListener('click',function(e){if(e.target===ov)done()});
+    document.body.appendChild(ov);
+  }
+  $('ymCloseTop').addEventListener('click',function(){close();askClose()});
   proxy('ymLockBtm','lockFloating',true);
   $('ymBell').addEventListener('click',function(){close();var o=$('navAlerts');if(o)o.click()});
 
