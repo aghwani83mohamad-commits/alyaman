@@ -11206,20 +11206,44 @@ function refreshUI(){var b=ensureBtn();if(b){setIf(b,'textContent','🔐 '+T('ف
 
 /* ---------- الفتح بالبصمة ---------- */
 var busy=false;
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
+function withTimeout(pr,ms,tag){return new Promise(function(res,rej){var t=setTimeout(function(){rej(new Error(tag||'timeout'))},ms);
+  pr.then(function(v){clearTimeout(t);res(v)},function(e){clearTimeout(t);rej(e)})})}
+function errMsg(e){return (e&&(e.message||e.errorMessage))||String(e||'')}
 async function tryBio(manual){
   if(busy||!enabled()||!plugin()||!lockedNow()||!singleLoginMode())return;busy=true;
+  var stage='verify';
   try{
-    await verify();
-    var pw=await readSecret();
-    if(!pw){await wipe();toast(T('تعذر استرجاع كلمة المرور، أدخلها يدويًا','Parola alınamadı, elle girin'),false);return}
+    /* 1) التحقق من البصمة (مع مهلة حتى لا يعلق الزر إن لم يرجع الجواب من أندرويد) */
+    await withTimeout(verify(),60000,T('انتهت مهلة البصمة','Parmak izi zaman aşımı'));
+    /* 2) استرجاع كلمة المرور المحفوظة */
+    stage='read';
+    var pw=await withTimeout(readSecret(),8000,'read timeout');
+    if(!pw)throw new Error('empty');
+    /* 3) فتح القفل بنفس مسار كلمة المرور */
+    stage='unlock';
     var f=$('lockPassword');f.value=pw;pw=null;captured=null;
     $('unlockBtn').click();
-    /* إن لم يُفتح القفل (كلمة المرور تغيّرت) نمسح السر القديم */
-    setTimeout(async function(){
-      if(lockedNow()){f.value='';var e=$('lockError');
-        if(e&&/غير صحيحة|Yanl|hatal/i.test(e.textContent||'')){await wipe();toast(T('كلمة المرور تغيّرت. أدخلها يدويًا ثم فعّل البصمة من جديد','Parola değişti. Elle girip yeniden etkinleştirin'),false)}}
-    },2500);
-  }catch(e){ if(manual)toast(T('لم يتم التحقق من البصمة: ','Parmak izi doğrulanamadı: ')+((e&&e.message)||''),false) }
+    for(var i=0;i<80;i++){           /* ننتظر حتى 40 ثانية (فك التشفير بطيء على بعض الهواتف) */
+      await sleep(500);
+      if(!lockedNow())return;
+      var e=$('lockError'),tx=(e&&e.textContent)||'';
+      if(/غير صحيحة|Yanl|hatal/i.test(tx)){f.value='';await wipe();sdel(DECL);
+        toast(T('كلمة المرور المحفوظة لم تعد صحيحة. أدخلها يدويًا ثم فعّل البصمة من جديد','Kayıtlı parola artık geçerli değil. Elle girip yeniden etkinleştirin'),false);return}
+      if(/محاولات خاطئة|Çok fazla/i.test(tx)){f.value='';return}
+    }
+    f.value='';
+    toast(T('لم يُفتح القفل بعد البصمة، أدخل كلمة المرور يدويًا','Kilit açılmadı, parolayı elle girin'),false);
+  }catch(e){
+    if(stage==='read'){
+      /* السر المخزّن غير قابل للقراءة (مفتاح الأندرويد تغيّر مثلًا) → نمسحه ونطلب التفعيل من جديد */
+      await wipe();sdel(DECL);
+      toast(T('تعذر استرجاع كلمة المرور من البصمة ('+errMsg(e)+'). أدخلها يدويًا ثم فعّل البصمة من جديد','Parola alınamadı ('+errMsg(e)+'). Elle girip yeniden etkinleştirin'),false);
+    }else if(stage==='verify'){
+      var m=errMsg(e);
+      if(manual||/مهلة|zaman/i.test(m))toast(T('لم يتم التحقق من البصمة: ','Parmak izi doğrulanamadı: ')+m,false);
+    }else toast(T('خطأ أثناء الفتح: ','Açma hatası: ')+errMsg(e),false);
+  }
   finally{busy=false}}
 
 /* ---------- تفعيل البصمة بعد دخول ناجح بكلمة المرور ---------- */
