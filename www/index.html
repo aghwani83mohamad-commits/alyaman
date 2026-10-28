@@ -2968,6 +2968,18 @@ function bcPick(m){
 </style>
 
 <div id="home" class="page active">
+<style id="hc-credit-style">
+#homeCurtain .hc-credit{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 4.5vh);z-index:6;pointer-events:none;text-align:center}
+#homeCurtain .hc-cr-lbl{display:flex;align-items:center;justify-content:center;gap:12px;margin:0 auto 4px;width:min(300px,70vw)}
+#homeCurtain .hc-cr-lbl i{flex:1;height:1px;background:linear-gradient(90deg,transparent,#e9c456)}
+#homeCurtain .hc-cr-lbl i:last-child{background:linear-gradient(270deg,transparent,#e9c456)}
+#homeCurtain .hc-cr-ar{font-family:'Cairo',Arial,sans-serif;font-weight:600;font-size:clamp(13px,3.6vw,17px);color:#f3d675;text-shadow:0 2px 4px rgba(0,0,0,.7)}
+#homeCurtain .hc-cr-name{font-family:Georgia,'Times New Roman',serif;font-style:italic;font-weight:700;letter-spacing:.03em;direction:ltr;font-size:clamp(20px,6vw,32px);
+  background:linear-gradient(180deg,#fffbe0 0%,#ffe48a 30%,#e9b93c 60%,#f3d36f 100%);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 2px 2px rgba(0,0,0,.85)) drop-shadow(0 5px 6px rgba(0,0,0,.6))}
+#home.op #homeCurtain .hc-credit,#home.cl #homeCurtain .hc-credit{opacity:0!important;visibility:hidden;transition:opacity .12s,visibility 0s .12s}
+@media print{#homeCurtain .hc-credit{display:none!important}}
+</style>
   <div id="homeCurtain" aria-label="ستارة الخصوصية">
     <div class="hc-whole"><div class="hc-img"></div></div>
     <div class="hc-p hc-l"><div class="hc-img"></div></div>
@@ -2980,6 +2992,10 @@ function bcPick(m){
       </div>
       <div class="hc-orn"><i></i><b></b><i></i></div>
       <div class="hc-date"><span class="hc-day" id="hcDay"></span><span class="hc-dot"></span><span id="hcDate"></span></div>
+    </div>
+    <div class="hc-credit" aria-label="تصميم Mohamad Al Aghwani">
+      <div class="hc-cr-lbl"><i></i><span class="hc-cr-ar">تصميم</span><i></i></div>
+      <div class="hc-cr-name">Mohamad Al Aghwani</div>
     </div>
   </div>
 
