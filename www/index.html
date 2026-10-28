@@ -11140,7 +11140,15 @@ function plugin(){
     if(!C||!C.isNativePlatform||!C.isNativePlatform())return null;
     P=(C.Plugins&&C.Plugins.NativeBiometric)||C.registerPlugin('NativeBiometric');}catch(e){P=null}
   return P}
-async function available(){var p=plugin();if(!p)return false;try{var r=await p.isAvailable();return !!(r&&r.isAvailable)}catch(e){return false}}
+var availErr='';
+function reasonText(code){code=+code;
+  if(code===11)return T('لا توجد بصمة مسجّلة في الهاتف. سجّل بصمتك من إعدادات الهاتف أولًا','Telefonda kayıtlı parmak izi yok. Önce ayarlardan ekleyin');
+  if(code===12)return T('الجهاز لا يحتوي مستشعر بصمة','Cihazda parmak izi sensörü yok');
+  if(code===1)return T('مستشعر البصمة غير متاح الآن','Parmak izi sensörü şu an kullanılamıyor');
+  return T('البصمة غير متاحة على هذا الجهاز (رمز '+code+')','Parmak izi bu cihazda kullanılamıyor (kod '+code+')')}
+async function available(){availErr='';var p=plugin();if(!p){availErr=T('إضافة البصمة غير موجودة في هذه النسخة','Parmak izi eklentisi bu sürümde yok');return false}
+  try{var r=await p.isAvailable();if(r&&r.isAvailable)return true;availErr=reasonText(r&&r.errorCode);return false}
+  catch(e){availErr=T('تعذر فحص البصمة: ','Parmak izi kontrol edilemedi: ')+((e&&e.message)||e);return false}}
 function enabled(){return sget(FLAG)==='1'}
 async function verify(){var p=plugin();
   await p.verifyIdentity({reason:T('افتح برنامج اليمان','Alyaman uygulamasını aç'),title:T('اليمان للتجارة','Alyaman Ticaret'),
@@ -11158,16 +11166,25 @@ function singleLoginMode(){var f=$('lockPassword'),f2=$('lockPassword2');
 function lockedNow(){return document.documentElement.classList.contains('sec-locked')}
 
 /* زر البصمة في شاشة القفل */
-var btn=null;
+var btn=null,en=null;
 function ensureBtn(){if(btn&&document.body.contains(btn))return btn;
   var row=document.querySelector('#appLock .lock-row');if(!row)return null;
   btn=document.createElement('button');btn.type='button';btn.id='bioUnlockBtn';
   btn.style.cssText='display:none;width:100%;margin-top:10px;padding:13px;border:1.5px solid #caa24d;border-radius:12px;background:#0f2f4f;color:#fff;font:700 16px Cairo,sans-serif;cursor:pointer';
   btn.addEventListener('click',function(){tryBio(true)});
-  row.parentNode.insertBefore(btn,row);return btn}
+  row.parentNode.insertBefore(btn,row);
+  en=document.createElement('button');en.type='button';en.id='bioEnableBtn';
+  en.style.cssText='display:none;width:100%;margin-top:10px;padding:11px;border:1px dashed #caa24d;border-radius:12px;background:transparent;color:#123454;font:700 14px Cairo,sans-serif;cursor:pointer';
+  en.addEventListener('click',function(){
+    var f=$('lockPassword');
+    if(!f||!f.value){toast(T('أدخل كلمة المرور أولًا ثم اضغط تفعيل البصمة','أدخل كلمة المرور'),false);return}
+    enableAfter=true;captured=f.value;$('unlockBtn').click()});
+  row.parentNode.insertBefore(en,row);return btn}
 function setIf(el,prop,val){if(prop==='display'){if(el.style.display!==val)el.style.display=val}else if(el[prop]!==val)el[prop]=val}
 function refreshUI(){var b=ensureBtn();if(b){setIf(b,'textContent','🔐 '+T('فتح بالبصمة','Parmak iziyle aç'));
-    setIf(b,'display',(enabled()&&plugin()&&singleLoginMode())?'block':'none')}
+    setIf(b,'display',(enabled()&&plugin()&&singleLoginMode())?'block':'none');
+    if(en){setIf(en,'textContent','🔐 '+T('تفعيل الفتح بالبصمة','Parmak iziyle açmayı etkinleştir'));
+      setIf(en,'display',(!enabled()&&plugin()&&singleLoginMode())?'block':'none')}}
   var s=$('bioSettingsStatus');if(s){setIf(s,'textContent',enabled()?T('مفعّلة ✅','Etkin ✅'):T('غير مفعّلة','Devre dışı'));
     var a=$('bioSettingsBtn');if(a)setIf(a,'textContent',enabled()?T('إيقاف البصمة','Parmak izini kapat'):T('تفعيل البصمة','Parmak izini etkinleştir'))}}
 
@@ -11186,19 +11203,22 @@ async function tryBio(manual){
       if(lockedNow()){f.value='';var e=$('lockError');
         if(e&&/غير صحيحة|Yanl|hatal/i.test(e.textContent||'')){await wipe();toast(T('كلمة المرور تغيّرت. أدخلها يدويًا ثم فعّل البصمة من جديد','Parola değişti. Elle girip yeniden etkinleştirin'),false)}}
     },2500);
-  }catch(e){ if(manual)toast(T('لم يتم التحقق من البصمة','Parmak izi doğrulanamadı'),false) }
+  }catch(e){ if(manual)toast(T('لم يتم التحقق من البصمة: ','Parmak izi doğrulanamadı: ')+((e&&e.message)||''),false) }
   finally{busy=false}}
 
 /* ---------- تفعيل البصمة بعد دخول ناجح بكلمة المرور ---------- */
-var captured=null,wasChange=false;
-document.addEventListener('click',function(e){
-  var t=e.target;if(!t||t.id!=='unlockBtn')return;
+var captured=null,wasChange=false,enableAfter=false;
+function grab(){
   var f1=$('lockPassword'),f2=$('lockPassword2'),f3=$('lockPassword3');
-  var changing=f3&&f3.style.display!=='none';
-  wasChange=!!changing;
-  if(changing)captured=f2?f2.value:null;      /* كلمة المرور الجديدة */
-  else if(f1&&f1.value&&(singleLoginMode()||(f2&&f2.style.display!=='none')))captured=f1.value;   /* دخول أو إنشاء كلمة مرور */
-},true);
+  var changing=!!(f3&&f3.style.display!=='none');
+  if(changing){wasChange=true;if(f2&&f2.value)captured=f2.value;return}   /* كلمة المرور الجديدة */
+  wasChange=false;
+  if(!f1||f1.type!=='password')return;
+  var setup=!!(f2&&f2.style.display!=='none');
+  if(singleLoginMode()||setup)captured=f1.value||null;                      /* دخول أو إنشاء كلمة مرور */
+}
+['input','keydown','keyup','change','click','touchend'].forEach(function(ev){
+  document.addEventListener(ev,function(e){var n=$('appLock');if(n&&e.target&&n.contains(e.target))grab()},true)});
 
 function askEnable(){return new Promise(function(res){
   var d=document.createElement('div');d.style.cssText='position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;font-family:Cairo,sans-serif';
@@ -11211,9 +11231,9 @@ function askEnable(){return new Promise(function(res){
   box.appendChild(y);box.appendChild(n);document.body.appendChild(d)})}
 
 async function enable(pw){
-  if(!(await available())){toast(T('الجهاز لا يدعم البصمة أو لم تسجّل بصمة في إعدادات الهاتف','Cihaz parmak izini desteklemiyor veya kayıtlı parmak izi yok'),false);return false}
+  if(!(await available())){toast(availErr,false);return false}
   try{await verify();await saveSecret(pw);sset(FLAG,'1');refreshUI();toast(T('تم تفعيل الفتح بالبصمة','Parmak iziyle açma etkinleştirildi'),true);return true}
-  catch(e){toast(T('لم يتم التفعيل','Etkinleştirilemedi'),false);return false}}
+  catch(e){toast(T('لم يتم التفعيل: ','Etkinleştirilemedi: ')+((e&&e.message)||''),false);return false}}
 
 /* راقب فتح القفل */
 var prevLocked=true;
@@ -11221,10 +11241,11 @@ new MutationObserver(function(){
   var l=lockedNow();
   if(l&&!prevLocked){ /* أُغلق البرنامج */ captured=null;refreshUI();setTimeout(function(){tryBio(false)},400) }
   if(!l&&prevLocked){ /* فُتح */
-    var pw=captured;captured=null;
+    var pw=captured;captured=null;var forced=enableAfter;enableAfter=false;
     if(pw&&plugin()){
-      if(wasChange&&enabled()){saveSecret(pw).catch(function(){wipe()})}              /* حدّث السر بعد تغيير كلمة المرور */
-      else if(!enabled()&&sget(DECL)!=='1'){available().then(function(ok){if(!ok)return;
+      if(forced){sdel(DECL);enable(pw)}
+      else if(wasChange&&enabled()){saveSecret(pw).catch(function(){wipe()})}              /* حدّث السر بعد تغيير كلمة المرور */
+      else if(!enabled()&&sget(DECL)!=='1'){available().then(function(ok){if(!ok){if(!window.__bioWarned){window.__bioWarned=1;toast(availErr,false)}return}
           askEnable().then(function(y){if(y)enable(pw);else sset(DECL,'1')})})}
     }
     wasChange=false}
