@@ -11160,7 +11160,7 @@ async function wipe(){var p=plugin();sdel(FLAG);try{if(p)await p.deleteCredentia
 /* ---------- أدوات الواجهة ---------- */
 function toast(msg,ok){try{var t=document.createElement('div');t.textContent=msg;
   t.style.cssText='position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:2147483647;padding:10px 18px;border-radius:12px;color:#fff;font:600 14px Cairo,Arial,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.25);max-width:90%;text-align:center;background:'+(ok?'#1e8e4e':'#c0392b');
-  document.body.appendChild(t);setTimeout(function(){t.remove()},3500)}catch(e){}}
+  (lockedNow()&&$('appLock')?$('appLock'):document.body).appendChild(t);setTimeout(function(){t.remove()},3500)}catch(e){}}
 function singleLoginMode(){var f=$('lockPassword'),f2=$('lockPassword2');
   return !!f&&f.type==='password'&&(!f2||f2.style.display==='none')}
 function lockedNow(){return document.documentElement.classList.contains('sec-locked')}
