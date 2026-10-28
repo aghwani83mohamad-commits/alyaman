@@ -11169,9 +11169,25 @@ function enabled(){return sget(FLAG)==='1'}
 async function verify(){var p=plugin();
   await p.verifyIdentity({reason:T('افتح برنامج اليمان','Alyaman uygulamasını aç'),title:T('اليمان للتجارة','Alyaman Ticaret'),
     subtitle:T('استخدم بصمة الإصبع','Parmak izinizi kullanın'),negativeButtonText:T('استخدام كلمة المرور','Parolayı kullan'),useFallback:false,maxAttempts:3})}
-async function saveSecret(pw){var p=plugin();await p.setCredentials({username:'applock',password:pw,server:SERVER})}
-async function readSecret(){var p=plugin();var c=await p.getCredentials({server:SERVER});return c&&c.password}
-async function wipe(){var p=plugin();sdel(FLAG);try{if(p)await p.deleteCredentials({server:SERVER})}catch(e){}refreshUI()}
+/* تخزين كلمة المرور: مفتاح AES-GCM غير قابل للاستخراج داخل IndexedDB (بدل مخزن الإضافة الذي كان يفشل).
+   لا يُفتح السر إلا بعد نجاح البصمة؛ والتحقق يتم بقراءة السر فور حفظه. */
+function idb(){return new Promise(function(res,rej){var r=indexedDB.open('alyaman_bio_db',1);
+  r.onupgradeneeded=function(){r.result.createObjectStore('k')};r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error||new Error('idb open'))}})}
+async function idbOp(mode,fn){var db=await idb();return new Promise(function(res,rej){var tx=db.transaction('k',mode),rq=fn(tx.objectStore('k'));
+  tx.oncomplete=function(){db.close();res(rq&&rq.result)};tx.onerror=tx.onabort=function(){db.close();rej(tx.error||new Error('idb tx'))}})}
+async function saveSecret(pw){
+  var key=await crypto.subtle.generateKey({name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+  var iv=crypto.getRandomValues(new Uint8Array(12));
+  var ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},key,new TextEncoder().encode(pw));
+  await idbOp('readwrite',function(st){return st.put({key:key,iv:iv,ct:ct},'bio')});
+  var back=await readSecret();if(back!==pw)throw new Error('تعذر التحقق من الحفظ')}
+async function readSecret(){
+  var r=await idbOp('readonly',function(st){return st.get('bio')});
+  if(!r)throw new Error('لا توجد كلمة محفوظة');
+  var pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:r.iv},r.key,r.ct);
+  return new TextDecoder().decode(pt)}
+async function wipe(){var p=plugin();sdel(FLAG);try{await idbOp('readwrite',function(st){return st.delete('bio')})}catch(e){}
+  try{if(p)await p.deleteCredentials({server:SERVER})}catch(e){}refreshUI()}
 
 /* ---------- أدوات الواجهة ---------- */
 function toast(msg,ok){try{var t=document.createElement('div');t.textContent=msg;
