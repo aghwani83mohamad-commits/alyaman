@@ -9854,15 +9854,12 @@ window.addEventListener('load',function(){
     /* المتاجر الفرعية الأخرى: نفس الأقسام لكل متجر فرعي */
     var names=ymStoreList(),mainN=names[0],subs=names.slice(1);
     rows.forEach(function(m){if(m.store&&m.store!==mainN&&subs.indexOf(m.store)<0)subs.push(m.store)});
-    var sh='';
-    if(!subs.length)sh='<div class="muted">لا توجد متاجر فرعية. أضفها من الإضافات ➜ المتاجر.</div>';
-    subs.forEach(function(n){
-      var sr=rows.filter(function(m){return m.store===n});
-      sh+='<h4 style="margin:12px 0 6px">🏬 '+esc(n)+'</h4>';
-      if(!sr.length){sh+='<div class="muted" style="margin-bottom:6px">لا توجد حركات لهذا المتجر</div>';return}
-      repParts(sr,false).forEach(function(p){sh+='<div style="margin:8px 0 2px"><b>'+p.title+'</b></div>'+p.html});
+    if(!subs.length)S.push({id:'sr-s-stores',nav:'المتاجر',title:'🏬 تقارير اليومية المتاجر الفرعية الأخرى',def:true,html:'<div class="muted">لا توجد متاجر فرعية. أضفها من الإضافات ➜ المتاجر.</div>'});
+    subs.forEach(function(n,i){
+      var sr=rows.filter(function(m){return m.store===n}),sh='';
+      repParts(sr,true).forEach(function(p){sh+='<div style="margin:10px 0 2px"><b>'+p.title+'</b></div>'+p.html});
+      S.push({id:'sr-s-store'+(i+1),nav:'🏬 '+esc(n),title:'🏬 '+esc(n)+' — '+(mode==='day'?'تقرير يومي':'تقرير شهري'),def:true,html:sh});
     });
-    S.push({id:'sr-s-stores',nav:'المتاجر',title:'🏬 تقارير اليومية المتاجر الفرعية الأخرى',def:true,html:sh});
 
     var h='';
     if(!forPrint){
