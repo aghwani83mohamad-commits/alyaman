@@ -3515,6 +3515,7 @@ function bcPick(m){
       <button type="button" data-inv-tab="sret" data-inv-mode="sret" onclick="invPick('sret')"><span>🚚</span>فاتورة مرتجع موارد</button>
     </div>
     <div class="row">
+      <div><label>🏬 المتجر</label><select id="invStore" onchange="renderInvoices()"><option value="">كل المتاجر</option></select></div>
       <div><label>رقم الفاتورة</label><input id="invNo" placeholder="ابحث برقم الفاتورة" oninput="renderInvoices()"></div>
       <div><label id="invPartyLbl">اسم الزبون / المورد</label><select id="invParty" onchange="renderInvoices()"><option value="">الكل — اختر من الأسماء المخزنة</option></select></div>
       <div id="invTypeWrap"><label>النوع</label><select id="invType" onchange="renderInvoices();invMarkActive()"><option value="all">الكل (بيع وشراء)</option><option value="sale">فواتير البيع</option><option value="purchase">فواتير الشراء</option></select></div>
@@ -8878,6 +8879,24 @@ window.addEventListener('load',function(){
 
   var KIND={sale:'بيع',purchase:'شراء',return:'ترجيع للمورد',creturn:'مرتجع زبون'};
 
+  // المتاجر: السجلات بلا متجر تتبع المتجر الأم (الأول)
+  function stNames(){ try{ return ymStoreList(); }catch(e){ return []; } }
+  function invStoreOf(f){
+    var n=stNames(), st=f&&f.ref&&f.ref.store;
+    return st||n[0]||'';
+  }
+  function fillStores(){
+    var el=$('invStore'); if(!el) return;
+    var names=stNames().slice();
+    buildInvoices().forEach(function(f){var s=f.ref&&f.ref.store; if(s&&names.indexOf(s)<0) names.push(s);});
+    var sig=names.join('\u0001');
+    if(el.getAttribute('data-sig')===sig) return;
+    var old=el.value;
+    el.innerHTML='<option value="">كل المتاجر</option>'+names.map(function(n){return '<option value="'+E(n)+'">'+E(n)+'</option>'}).join('');
+    el.setAttribute('data-sig',sig);
+    el.value=names.indexOf(old)>=0?old:'';
+  }
+
   function filtered(){
     var q=($('invNo')&&$('invNo').value||'').trim();
     var from=$('invFrom').value?new Date($('invFrom').value+'T00:00:00'):null;
@@ -8885,7 +8904,9 @@ window.addEventListener('load',function(){
     if(from&&to&&from>to){alert('من التاريخ يجب أن يكون قبل إلى التاريخ');return null;}
     var type=$('invType').value;
     var pq=($('invParty')&&$('invParty').value||'').trim().toLowerCase();
+    var sv=($('invStore')&&$('invStore').value)||'';
     return buildInvoices().filter(function(f){
+      if(sv&&invStoreOf(f)!==sv) return false;
       if(tab==='cret'){ if(f.kind!=='creturn') return false; }
       else if(tab==='sret'){ if(f.kind!=='return') return false; }
       else if(tab==='trade'){ if(f.kind==='return'||f.kind==='creturn') return false; if(type==='sale'&&f.kind!=='sale') return false; if(type==='purchase'&&f.kind!=='purchase') return false; }
@@ -8906,7 +8927,7 @@ window.addEventListener('load',function(){
     if($('invPartySug')) $('invPartySug').style.display='none';
     renderInvoices();
   };
-  window.invClear=function(){$('invNo').value='';if($('invParty'))$('invParty').value='';$('invFrom').value='';$('invTo').value='';$('invType').value='all';renderInvoices();};
+  window.invClear=function(){if($('invStore'))$('invStore').value='';$('invNo').value='';if($('invParty'))$('invParty').value='';$('invFrom').value='';$('invTo').value='';$('invType').value='all';renderInvoices();};
 
   function fillSuppliers(){
     var s=$('invSupp'); if(!s) return; var old=s.value;
@@ -8944,15 +8965,17 @@ window.addEventListener('load',function(){
   window.renderInvoices=function(){
     if(!$('invList')) return;
     fillSuppliers();
+    fillStores();
     fillParties();
     var list=filtered(); if(!list){return;}
+    var multi=stNames().length>1;
     var partyHead=(tab==='supp'||tab==='sret')?'المورد':(tab==='cret'?'الزبون':'الزبون / المورد');
     $('invSummary').textContent='عدد الفواتير: '+list.length;
     if(!list.length){$('invList').innerHTML='<div class="muted">لا توجد فواتير مطابقة.</div>';return;}
-    $('invList').innerHTML='<table><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>النوع</th><th>'+partyHead+'</th><th>الأصناف</th><th>الإجمالي</th><th>الدفع</th><th>إجراء</th></tr>'+
+    $('invList').innerHTML='<table><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>النوع</th><th>'+partyHead+'</th>'+(multi?'<th>المتجر</th>':'')+'<th>الأصناف</th><th>الإجمالي</th><th>الدفع</th><th>إجراء</th></tr>'+
       list.map(function(f){
         var names=f.lines.map(function(l){return E(l.name)}).join('، ');
-        return '<tr><td>'+E(f.no)+'</td><td>'+dateStr(f.date)+'</td><td>'+KIND[f.kind]+'</td><td>'+E(f.party)+'</td><td>'+names+'</td><td>'+mc(f.total,f.ref)+'</td><td>'+(f.pay==='آجل'?'آجل':f.pay)+'</td>'+
+        return '<tr><td>'+E(f.no)+'</td><td>'+dateStr(f.date)+'</td><td>'+KIND[f.kind]+'</td><td>'+E(f.party)+'</td>'+(multi?'<td>'+E(invStoreOf(f))+'</td>':'')+'<td>'+names+'</td><td>'+mc(f.total,f.ref)+'</td><td>'+(f.pay==='آجل'?'آجل':f.pay)+'</td>'+
           '<td><button class="secondary" type="button" onclick="printInvoiceDoc(\''+f.kind+'\',\''+E(f.key).replace(/'/g,'')+'\')">🖨️ طباعة</button></td></tr>';
       }).join('')+'</table>';
   };
@@ -8967,7 +8990,7 @@ window.addEventListener('load',function(){
     var rows=f.lines.map(function(l){
       return '<tr><td>'+E(l.name)+'</td><td>'+l.qty+'</td><td>'+money(l.price)+'</td>'+(hasDisc?'<td>'+money(l.discount)+'</td>':'')+'<td>'+money(l.total)+'</td></tr>';
     }).join('');
-    doPrint(title,'<h1>اليمان للتجارة</h1><h2>'+title+'</h2><div class="head"><span>التاريخ: '+new Date(f.date).toLocaleString(currentLang)+'</span><span>رقم الفاتورة: '+E(f.no)+'</span></div><p>'+partyLbl+': <b>'+E(f.party)+'</b></p><p>طريقة الدفع: '+E(f.pay)+'</p><table><tr><th>الصنف</th><th>الكمية</th><th>سعر الوحدة</th>'+(hasDisc?'<th>الخصم</th>':'')+'<th>الإجمالي</th></tr>'+rows+'</table><p class="total">الإجمالي: '+mc(f.total,f.ref)+'</p>');
+    doPrint(title,'<h1>اليمان للتجارة</h1><h2>'+title+'</h2><div class="head"><span>التاريخ: '+new Date(f.date).toLocaleString(currentLang)+'</span><span>رقم الفاتورة: '+E(f.no)+'</span></div><p>'+partyLbl+': <b>'+E(f.party)+'</b></p>'+(stNames().length>1?'<p>المتجر: <b>'+E(invStoreOf(f))+'</b></p>':'')+'<p>طريقة الدفع: '+E(f.pay)+'</p><table><tr><th>الصنف</th><th>الكمية</th><th>سعر الوحدة</th>'+(hasDisc?'<th>الخصم</th>':'')+'<th>الإجمالي</th></tr>'+rows+'</table><p class="total">الإجمالي: '+mc(f.total,f.ref)+'</p>');
   };
 
   window.toggleInvList=function(){
@@ -8981,8 +9004,10 @@ window.addEventListener('load',function(){
     if(!list.length) return alert('لا توجد فواتير للطباعة.');
     var title=tab==='supp'?'قائمة فواتير الموردين':(tab==='cret'?'قائمة فواتير مرتجع الزبائن':(tab==='sret'?'قائمة فواتير مرتجع الموارد':(($('invType')&&$('invType').value==='sale')?'قائمة فواتير البيع':(($('invType')&&$('invType').value==='purchase')?'قائمة فواتير الشراء':'قائمة فواتير المبيعات والمشتريات'))));
     var tot=list.reduce(function(a,f){return a+f.total},0);
-    doPrint(title,'<h1>اليمان للتجارة</h1><h2>'+title+'</h2><table><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>النوع</th><th>الجهة</th><th>الإجمالي</th><th>الدفع</th></tr>'+
-      list.map(function(f){return '<tr><td>'+E(f.no)+'</td><td>'+dateStr(f.date)+'</td><td>'+KIND[f.kind]+'</td><td>'+E(f.party)+'</td><td>'+mc(f.total,f.ref)+'</td><td>'+E(f.pay)+'</td></tr>'}).join('')+
+    var psv=($('invStore')&&$('invStore').value)||'', pm=stNames().length>1;
+    if(psv) title+=' — '+psv;
+    doPrint(title,'<h1>اليمان للتجارة</h1><h2>'+title+'</h2><table><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>النوع</th><th>الجهة</th>'+(pm?'<th>المتجر</th>':'')+'<th>الإجمالي</th><th>الدفع</th></tr>'+
+      list.map(function(f){return '<tr><td>'+E(f.no)+'</td><td>'+dateStr(f.date)+'</td><td>'+KIND[f.kind]+'</td><td>'+E(f.party)+'</td>'+(pm?'<td>'+E(invStoreOf(f))+'</td>':'')+'<td>'+mc(f.total,f.ref)+'</td><td>'+E(f.pay)+'</td></tr>'}).join('')+
       '</table><p class="total">عدد الفواتير: '+list.length+'</p>');
   };
 
