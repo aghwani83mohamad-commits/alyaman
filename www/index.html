@@ -2380,6 +2380,13 @@ html:not(.ym-tr) #appLock .ll-btn[data-l=ar],html.ym-tr #appLock .ll-btn[data-l=
       </label>
     </div>
 
+    <div class="cloud-grid" style="margin-top:6px">
+      <label>🏬 اسم المتجر لهذا الجهاز (يُسجَّل مع كل بيع وشراء وحركة جديدة)
+        <input id="cloudStoreName" type="text" placeholder="مثال: المتجر الثاني" autocomplete="off">
+      </label>
+      <button type="button" class="secondary" onclick="ymSaveStoreName()">💾 حفظ اسم المتجر</button>
+    </div>
+
     <div class="cloud-actions">
       <button type="button" class="primary" onclick="cloudConnect()">🔗 اتصال / تسجيل دخول</button>
       <button type="button" class="secondary" onclick="cloudSignUp()">👤 إنشاء حساب سحابي</button>
@@ -3958,6 +3965,7 @@ function openCloudSyncPanel(){
   document.getElementById('cloudProjectUrl').value=c.url||'';
   document.getElementById('cloudAnonKey').value=c.key||'';
   document.getElementById('cloudEmail').value=c.email||'';
+  { const sn=document.getElementById('cloudStoreName'); if(sn) sn.value=ymStoreName(); }
   p.classList.add('open'); p.setAttribute('aria-hidden','false');
   cloudSetStatus(cloudClient ? 'online' : 'offline', cloudClient ? '🟢 متصل بالسحابة' : '⚪ غير متصل بالسحابة');
 }
@@ -4174,7 +4182,7 @@ function cloudApplyRemote(data,silent=false){
     return true;
   }
   window.__cloudWriting=true;
-  try{ db=data.payload; ymNormalizeDb(); saveLocalOnly(); } finally{ window.__cloudWriting=false; }
+  try{ db=data.payload; ymNormalizeDb(); saveLocalOnly(); ymMarkKnown(); } finally{ window.__cloudWriting=false; }
   try{render();}catch(e){console.error(e);}
   cloudConflict=false;
   cloudLastRemoteUpdatedAt=data.updated_at||'';
@@ -4319,7 +4327,7 @@ async function _cloudCoreImpl(opts){
     if(needApply){
       cloudBackupBeforeApply();
       window.__cloudWriting=true;
-      try{ db=JSON.parse(JSON.stringify(finalLocal)); ymNormalizeDb(); saveLocalOnly(); } finally{ window.__cloudWriting=false; }
+      try{ db=JSON.parse(JSON.stringify(finalLocal)); ymNormalizeDb(); saveLocalOnly(); ymMarkKnown(); } finally{ window.__cloudWriting=false; }
       try{render();}catch(e){console.error(e);}
     }
     cloudConflict=false;
@@ -4472,9 +4480,37 @@ function saveLocalOnly(){
   try{localStorage.setItem(KEY,payload);}
   catch(e){console.error('Local save after cloud download failed',e);}
 }
+/* ===== المتجر: كل حركة جديدة تُسجَّل مع اسم متجر هذا الجهاز (الاسم يُحفظ على الجهاز ولا يُزامَن) ===== */
+const YM_STORE_KEY='alyaman_store_name';
+const YM_STORE_ARRAYS=['sales','purchases','returns','supplierReturns','expenses','customerPayments','supplierPayments','stockAdjustments','cashMovements','salaryTransactions','stocktakes'];
+const ymKnownIds={};
+function ymStoreName(){ try{ return (localStorage.getItem(YM_STORE_KEY)||'').trim(); }catch(_){ return ''; } }
+function ymStoreTag(x){ return (x&&x.store)?` <small style="color:#a16207;font-weight:700;white-space:nowrap">🏬 ${esc(x.store)}</small>`:''; }
+function ymMarkKnown(){
+  YM_STORE_ARRAYS.forEach(k=>{ const st=ymKnownIds[k]=ymKnownIds[k]||new Set(); (db[k]||[]).forEach(r=>{ if(r&&r.id!=null) st.add(String(r.id)); }); });
+}
+function ymStampStore(){
+  const fresh=[];
+  YM_STORE_ARRAYS.forEach(k=>{
+    const st=ymKnownIds[k]=ymKnownIds[k]||new Set();
+    (db[k]||[]).forEach(r=>{ if(!r||r.id==null) return; const id=String(r.id); if(st.has(id)) return; st.add(id); fresh.push(r); });
+  });
+  const name=ymStoreName();
+  if(!name||fresh.length>40) return;          // لا اسم متجر، أو استيراد/استرجاع كبير: لا نختم
+  fresh.forEach(r=>{ if(!r.store) r.store=name; });
+}
+function ymSaveStoreName(){
+  const v=(document.getElementById('cloudStoreName')?.value||'').trim();
+  try{ if(v) localStorage.setItem(YM_STORE_KEY,v); else localStorage.removeItem(YM_STORE_KEY); }catch(_){}
+  const m=v?('✅ ستُسجَّل كل حركة جديدة من هذا الجهاز باسم: '+v):'تم إيقاف تسجيل اسم المتجر على هذا الجهاز';
+  cloudSetStatus('online',m); alert(m);
+}
+ymMarkKnown();
+
 function save() {
   const stamp = now();
   db.updatedAt = stamp;
+  try{ ymStampStore(); }catch(e){ console.warn('store stamp failed',e); }
   if (!Array.isArray(db.auditLog)) db.auditLog = [];
   db.auditLog.unshift({at: stamp, action: 'Data saved', user: 'Administrator'});
   db.auditLog = db.auditLog.slice(0, 500);
@@ -6666,11 +6702,11 @@ function render() {
    stCustomer.innerHTML = `<option value="0">${t('optSelectCust')}</option>` + db.customers.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
   stSupplier.innerHTML = `<option value="0">${t('optSelectSupp')}</option>` + db.suppliers.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
 
-  salesList.innerHTML = db.sales.length ? `<table><tr><th>${t('thDate')}</th><th>${t('thItem')}</th><th>${t('thQty')}</th><th>${t('thTotal')}</th><th>${t('thPayment')}</th></tr>` + db.sales.slice(0, 40).map(x => `<tr><td>${new Date(x.date).toLocaleDateString(currentLang)}</td><td>${esc(x.name)}</td><td>${x.qty}</td><td>${moneyC(x.total,txCurrency(x))}</td><td>${x.pay === 'آجل' ? t('optCredit') : t('optCash')}</td></tr>`).join('') + '</table>' : `<div class="muted">${t('msgNoSales')}</div>`;
+  salesList.innerHTML = db.sales.length ? `<table><tr><th>${t('thDate')}</th><th>${t('thItem')}</th><th>${t('thQty')}</th><th>${t('thTotal')}</th><th>${t('thPayment')}</th></tr>` + db.sales.slice(0, 40).map(x => `<tr><td>${new Date(x.date).toLocaleDateString(currentLang)}</td><td>${esc(x.name)}${ymStoreTag(x)}</td><td>${x.qty}</td><td>${moneyC(x.total,txCurrency(x))}</td><td>${x.pay === 'آجل' ? t('optCredit') : t('optCash')}</td></tr>`).join('') + '</table>' : `<div class="muted">${t('msgNoSales')}</div>`;
 
   purchasesList.innerHTML = db.purchases.length ? `<table><tr><th>${t('thDate')}</th><th>${t('thItem')}</th><th>اسم المورد</th><th>${t('thQty')}</th><th>${t('thTotal')}</th><th>العملة</th><th>${t('thPayment')}</th></tr>` + db.purchases.slice(0, 40).map(x => {
     let supp = db.suppliers.find(v => v.id === x.supplierId);
-    return `<tr><td>${new Date(x.date).toLocaleDateString(currentLang)}</td><td>${esc(x.name)}</td><td>${esc(supp ? supp.name : '-')}</td><td>${x.qty}</td><td>${moneyC(x.total,txCurrency(x))}</td><td>${x.pay === 'آجل' ? t('optCredit') : t('optCash')}</td></tr>`;
+    return `<tr><td>${new Date(x.date).toLocaleDateString(currentLang)}</td><td>${esc(x.name)}${ymStoreTag(x)}</td><td>${esc(supp ? supp.name : '-')}</td><td>${x.qty}</td><td>${moneyC(x.total,txCurrency(x))}</td><td>${x.pay === 'آجل' ? t('optCredit') : t('optCash')}</td></tr>`;
   }).join('') + '</table>' : `<div class="muted">${t('msgNoPurchases')}</div>`;
 
   customersList.innerHTML = db.customers.length ? `<table><tr><th>${t('thName')}</th><th>${t('thPhone')}</th><th>${t('thAction')}</th></tr>` + db.customers.map(x => `<tr><td>${esc(x.name)}</td><td>${esc(x.phone)}</td><td><button class="danger" onclick="del('customers',${x.id})">${t('btnClearData').split(' ')[0]}</button></td></tr>`).join('') + '</table>' : `<div class="muted">${t('msgNoCust')}</div>`;
@@ -6708,7 +6744,7 @@ function render() {
   employeesList.innerHTML = db.employees.length ? `<table><tr><th>${empUI('employee')}</th><th>${empTableT('تاريخ بدء الخدمة','Service Start Date','Hizmet Başlangıç Tarihi')}</th><th>${empUI('serviceYears')}</th><th>${empTableT('الإجازة السنوية المستحقة','Annual Leave Entitlement','Yıllık İzin Hakkı')}</th><th>${empTableT('الراتب الأساسي','Basic Salary','Temel Maaş')}</th><th>${t('thAction')}</th></tr>` + db.employees.map(x=>{const leave=annualLeaveDays(x); return `<tr><td>${esc(x.name)}</td><td>${esc(x.serviceStart||'-')}</td><td>${leave.years===null?'-':leave.years}</td><td>${leave.days===null?empTableT('غير محدد','Not specified','Belirtilmemiş'):leave.days+' '+empTableT('يوم','day(s)','gün')}</td><td>${money(x.salary)}</td><td><button class="danger" onclick="del('employees',${x.id})">${empUI('delete')}</button></td></tr>`}).join('') + `</table>` : `<div class="muted">${empUI('noEmployees')}</div>`;
   salaryList.innerHTML = db.salaryTransactions.length ? `<table><tr><th>${empTableT('التاريخ','Date','Tarih')}</th><th>${empUI('employee')}</th><th>${empTableT('النوع','Type','Tür')}</th><th>${empTableT('المبلغ','Amount','Tutar')}</th><th>${empTableT('ملاحظة','Note','Not')}</th></tr>` + db.salaryTransactions.slice(0,100).map(x=>{const e=db.employees.find(e=>e.id===x.employeeId); return `<tr><td>${new Date(x.date).toLocaleDateString(currentLang)}</td><td>${esc(e?e.name:'-')}</td><td>${esc(empTypeLabel(x.type))}</td><td>${money(x.amount)}</td><td>${esc(x.note||'')}</td></tr>`}).join('') + `</table>` : `<div class="muted">${empUI('noSalaryOps')}</div>`;
 
-  expensesList.innerHTML = db.expenses.length ? `<table><tr><th>${t('thDate')}</th><th>${t('lblExpenses')}</th><th>${t('phAmount')}</th><th>العملة</th></tr>` + db.expenses.slice(0, 40).map(x => `<tr><td>${new Date(x.date).toLocaleDateString(currentLang)}</td><td>${esc(x.name)}</td><td>${moneyC(x.amount,txCurrency(x))}</td></tr>`).join('') + '</table>' : `<div class="muted">${t('msgNoExp')}</div>`;
+  expensesList.innerHTML = db.expenses.length ? `<table><tr><th>${t('thDate')}</th><th>${t('lblExpenses')}</th><th>${t('phAmount')}</th><th>العملة</th></tr>` + db.expenses.slice(0, 40).map(x => `<tr><td>${new Date(x.date).toLocaleDateString(currentLang)}</td><td>${esc(x.name)}${ymStoreTag(x)}</td><td>${moneyC(x.amount,txCurrency(x))}</td></tr>`).join('') + '</table>' : `<div class="muted">${t('msgNoExp')}</div>`;
 
   let y = new Date().getFullYear();
   year.innerHTML = [y - 2, y - 1, y, y + 1].map(v => `<option ${v === y ? 'selected' : ''}>${v}</option>`).join('');
