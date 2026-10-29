@@ -3278,6 +3278,7 @@ function bcPick(m){
     <div class="row">
       <div><label>بحث عن الزبون</label><input id="cdSearch" placeholder="اسم الزبون أو الهاتف" oninput="renderCustomerDebts()"></div>
       <div><label>حالة الدين</label><select id="cdStatus" onchange="renderCustomerDebts()"><option value="all">الكل</option><option value="debt">عليه دين</option><option value="clear">مسدد</option></select></div>
+      <div class="ym-stmt-store-wrap"><label>🏬 المتجر</label><select id="cdStore" onchange="renderCustomerDebts()"></select></div>
     </div>
     <div id="customerDebtSummary" class="cards"></div>
     <div id="customerDebtsList"></div>
@@ -3291,6 +3292,7 @@ function bcPick(m){
     <div class="row">
       <div><label>بحث عن المورد</label><input id="sdSearch" placeholder="اسم المورد أو الهاتف" oninput="renderSupplierDebts()"></div>
       <div><label>حالة الدين</label><select id="sdStatus" onchange="renderSupplierDebts()"><option value="all">الكل</option><option value="debt">له علينا</option><option value="clear">مسدد</option></select></div>
+      <div class="ym-stmt-store-wrap"><label>🏬 المتجر</label><select id="sdStore" onchange="renderSupplierDebts()"></select></div>
     </div>
     <div id="supplierDebtSummary" class="cards"></div>
     <div id="supplierDebtsList"></div>
@@ -3622,6 +3624,7 @@ function bcPick(m){
       <div><label id="empNameLabel">اسم الموظف</label><input id="empName" placeholder="اسم الموظف"></div>
       <div><label id="empSalaryLabel">الراتب الأساسي</label><input id="empSalary" type="number" min="0" step=".01" placeholder="الراتب"></div>
       <div><label id="empServiceStartLabel">تاريخ بدء الخدمة</label><input id="empServiceStart" type="date"></div>
+      <div class="ym-stmt-store-wrap"><label>🏬 المتجر (الموظف يُضاف إلى هذا المتجر)</label><select id="empStore"></select></div>
     </div>
     <button class="primary" onclick="addEmployee()" id="empAdd">حفظ الموظف</button>
   </section>
@@ -3676,7 +3679,7 @@ function bcPick(m){
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px">
       <h3 id="empAttendanceReport">كشف الدوام والخصومات</h3>
       <button class="secondary" onclick="printAttendanceTable()" id="empPrintAttendance">🖨️ طباعة جدول الدوام</button>
-    </div><div id="attendanceList"></div>
+    </div><div class="ym-stmt-store-wrap" style="margin:8px 0"><label>🏬 المتجر</label><select id="attStoreFilter" onchange="render()"></select></div><div id="attendanceList"></div>
     </section>
   <section data-sub="emp-detail" class="sub-hidden">
     <button type="button" class="back-btn" onclick="backSub('employees')">⬅ رجوع لقائمة الموظفين والرواتب</button>
@@ -3696,7 +3699,7 @@ function bcPick(m){
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
       <h3 id="empEmployeesList">قائمة الموظفين</h3>
       <button class="secondary" onclick="printEmployees()" id="empPrintEmployees">🖨️ طباعة جدول الموظفين</button>
-    </div><div id="employeesList"></div>
+    </div><div class="ym-stmt-store-wrap" style="margin:8px 0"><label>🏬 عرض موظفي المتجر</label><select id="empListStore" onchange="render()"></select></div><div id="employeesList"></div>
   </section>
   <section data-sub="emp-salaries" class="sub-hidden">
     <button type="button" class="back-btn" onclick="backSub('employees')">⬅ رجوع لقائمة الموظفين والرواتب</button>
@@ -3704,7 +3707,7 @@ function bcPick(m){
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
       <h3 id="empSalaryList">كشف رواتب الموظفين</h3>
       <button class="secondary" onclick="printSalaryTable()" id="empPrintSalaries">🖨️ طباعة جدول الرواتب</button>
-    </div><div id="salaryList"></div>
+    </div><div class="ym-stmt-store-wrap" style="margin:8px 0"><label>🏬 المتجر</label><select id="salaryStoreFilter" onchange="render()"></select></div><div id="salaryList"></div>
   </section>
 </div>
 
@@ -3714,10 +3717,12 @@ function bcPick(m){
     <input id="eName" placeholder="نوع المصروف">
     <input id="eAmount" type="number" step=".01" placeholder="المبلغ">
     <label>العملة</label><select id="eCurrency" class="currency-select"></select>
+    <div class="ym-stmt-store-wrap"><label>🏬 المتجر (المصروف يُسجَّل على هذا المتجر)</label><select id="eStore"></select></div>
     <button class="primary" onclick="addExpense()" id="btnSaveExpense">حفظ المصروف</button>
   </section>
   <section>
     <h2 id="lblExpensesList">المصروفات</h2>
+    <div class="ym-stmt-store-wrap" style="margin:0 0 8px"><label>🏬 عرض مصروفات المتجر</label><select id="expStoreFilter" onchange="render()"></select></div>
     <div id="expensesList"></div>
   </section>
 </div>
@@ -4544,6 +4549,16 @@ function ymItemsInStore(n){ return (db.items||[]).filter(x=>ymItemStore(x)===n);
 function ymItemFormStore(){ const e=document.getElementById('iStore'); const l=ymStoreList(); return (e&&l.includes(e.value))?e.value:l[0]; }
 function ymItemsForFilter(){ const f=document.getElementById('itemsStoreFilter'); const v=f?f.value:''; return (v&&v!=='__all')?ymItemsInStore(v):(db.items||[]); }
 function ymStmtStore(rec){ const l=ymStoreList(); return (rec&&rec.store)||l[0]; }
+function ymPickStore(id){ const e=document.getElementById(id); const l=ymStoreList(); return (e&&l.includes(e.value))?e.value:l[0]; }
+function ymEmpStore(e){ const l=ymStoreList(); return (e&&e.store&&l.includes(e.store))?e.store:l[0]; }
+function ymEmpTag(e){ return (e&&ymStoreList().length>1)?ymStoreTag({store:ymEmpStore(e)}):''; }
+function ymEmpVisible(e,id){ const v=ymStmtSel(id); return !v||ymEmpStore(e)===v; }
+function ymDebtStoreSel(kind){ return ymStmtSel(kind==='supplier'?'sdStore':'cdStore'); }
+function ymMoveEmployee(id,to){
+  if(!to) return; const e=(db.employees||[]).find(x=>x.id==id); if(!e) return;
+  if(!confirm('نقل الموظف «'+e.name+'» إلى '+to+'؟')) { render(); return; }
+  e.store=to; save();
+}
 function ymStmtMulti(){ return ymStoreList().length>1; }
 function ymStmtSel(id){ const e=document.getElementById(id); const v=e?e.value:''; return (v&&v!=='__all'&&ymStoreList().includes(v))?v:''; }
 function ymStmtFilter(rows,id){ const v=ymStmtSel(id); return v?rows.filter(r=>ymStmtStore(r)===v):rows; }
@@ -4555,7 +4570,8 @@ function ymFillItemStoreUI(){
   const iv=document.getElementById('invStoreFilter');
   if(iv&&iv.dataset.sig!==sig){ const old=iv.value; iv.innerHTML='<option value="__all">كل المتاجر</option>'+list.map(n=>`<option value="${ymEsc(n)}">${ymEsc(n)}</option>`).join(''); iv.dataset.sig=sig; iv.value=(old==='__all'||list.includes(old))?old:'__all'; }
   { const w=document.getElementById('invStoreWrap'); if(w) w.style.display=list.length>1?'':'none'; }
-  ['stCustStore','stSuppStore','rcStore','pvStore'].forEach(id=>{ const el=document.getElementById(id); if(el&&el.dataset.sig!==sig){ const old=el.value; el.innerHTML='<option value="__all">كل المتاجر</option>'+list.map(n=>`<option value="${ymEsc(n)}">${ymEsc(n)}</option>`).join(''); el.dataset.sig=sig; el.value=(old==='__all'||list.includes(old))?old:'__all'; } });
+  ['stCustStore','stSuppStore','rcStore','pvStore','cdStore','sdStore','expStoreFilter','empListStore','salaryStoreFilter','attStoreFilter'].forEach(id=>{ const el=document.getElementById(id); if(el&&el.dataset.sig!==sig){ const old=el.value; el.innerHTML='<option value="__all">كل المتاجر</option>'+list.map(n=>`<option value="${ymEsc(n)}">${ymEsc(n)}</option>`).join(''); el.dataset.sig=sig; el.value=(old==='__all'||list.includes(old))?old:'__all'; } });
+  ['eStore','empStore'].forEach(id=>{ const el=document.getElementById(id); if(el&&el.dataset.sig!==sig){ const old=el.value; el.innerHTML=list.map(n=>`<option value="${ymEsc(n)}">${ymEsc(n)}</option>`).join(''); el.dataset.sig=sig; el.value=list.includes(old)?old:list[0]; } });
   document.querySelectorAll('.ym-stmt-store-wrap').forEach(w=>{ w.style.display=list.length>1?'':'none'; });
   const f=document.getElementById('itemsStoreFilter');
   if(f&&f.dataset.sig!==sig){ const old=f.value; f.innerHTML='<option value="__all">كل المتاجر</option>'+list.map(n=>`<option value="${ymEsc(n)}">${ymEsc(n)}</option>`).join(''); f.dataset.sig=sig; f.value=(old==='__all'||list.includes(old))?old:'__all'; }
@@ -4594,7 +4610,7 @@ function ymStampStore(){
   if(!fresh.length||fresh.length>40) return;   // لا جديد، أو استيراد/استرجاع كبير: لا نختم
   const list=ymStoreList();
   const name=list.includes(window.__ymCurStore)?window.__ymCurStore:list[0];
-  fresh.forEach(r=>{ if(!r.store){ const _it=(r.itemId!=null)?(db.items||[]).find(x=>x.id==r.itemId):null; r.store=_it?ymItemStore(_it):name; } });
+  fresh.forEach(r=>{ if(!r.store){ const _it=(r.itemId!=null)?(db.items||[]).find(x=>x.id==r.itemId):null; const _em=(!_it&&r.employeeId!=null)?(db.employees||[]).find(x=>x.id==r.employeeId):null; r.store=_it?ymItemStore(_it):(_em?ymEmpStore(_em):name); } });
   if(name!==list[0]) setTimeout(()=>ymSetCurStore(list[0]),0);   // بعد تسجيل عملية متجر فرعي نعود للمتجر الأم تلقائياً
 }
 ymMarkKnown();
@@ -5538,7 +5554,7 @@ function ymPlanDel(k, i){ ymTmpPlan[k].splice(i, 1); ymPlanRender(k); }
 
 /* فواتير طرف واحد مع المتبقي على كل فاتورة */
 function ymPartyInvoices(kind, id){
-  var d = kind === 'supplier' ? supplierDebtData(id) : customerDebtData(id);
+  var d = kind === 'supplier' ? supplierDebtData(id, ymDebtStoreSel('supplier')) : customerDebtData(id, ymDebtStoreSel('customer'));
   var src = kind === 'supplier' ? d.purchases : d.sales;
   var g = {};
   src.forEach(function(s){
@@ -5782,7 +5798,7 @@ function addEmployee() {
   const serviceStart = empServiceStart.value;
   if (!n) return alert(empUI('enterEmployeeName'));
   db.employees = db.employees || [];
-  db.employees.push({id: Date.now(), name:n, salary, serviceStart});
+  db.employees.push({id: Date.now(), name:n, salary, serviceStart, store: ymPickStore('empStore')});
   empName.value = empSalary.value = empServiceStart.value = '';
   save();
 }
@@ -6106,7 +6122,7 @@ function printAttendanceTable() {
 function addExpense() {
   let n = eName.value.trim(), a = +eAmount.value || 0;
   if (!n || a <= 0) return alert(t('alertExpValid'));
-  db.expenses.unshift({ id: Date.now(), name: n, amount: a, currency: currencyCode(document.getElementById('eCurrency')?.value), date: now() });
+  db.expenses.unshift({ id: Date.now(), name: n, amount: a, currency: currencyCode(document.getElementById('eCurrency')?.value), date: now(), store: ymPickStore('eStore') });
   eName.value = eAmount.value = '';
   save();
 }
@@ -6185,14 +6201,15 @@ function sameCustomerId(a,b){
   return String(a ?? '').trim() === String(b ?? '').trim();
 }
 
-function customerDebtData(cid){
+function customerDebtData(cid,store){
   const sales=(db.sales||[]).filter(x =>
     !x.cancelled &&
+    (!store||ymStmtStore(x)===store) &&
     sameCustomerId(x.customerId,cid) &&
     isCreditSale(x)
   );
-  const allReturns=(db.returns||[]).filter(x => sameCustomerId(x.customerId,cid) && !ymReturnVoid(x));
-  const payments=(db.customerPayments||[]).filter(x => sameCustomerId(x.customerId,cid));
+  const allReturns=(db.returns||[]).filter(x => sameCustomerId(x.customerId,cid) && !ymReturnVoid(x) && (!store||ymStmtStore(x)===store));
+  const payments=(db.customerPayments||[]).filter(x => sameCustomerId(x.customerId,cid) && (!store||ymStmtStore(x)===store));
 
   // المرتجع النقدي لا يُنشئ ديناً على الزبون، ولا يجوز أن يخصم من دينٍ آخر.
   // فقط المرتجع المرتبط بعملية بيع آجلة يخفّض الدين.
@@ -6210,10 +6227,10 @@ function customerDebtData(cid){
   const paid=payments.reduce((a,x)=>a+debtNum(x.amount),0);
   return {sales,returns,allReturns,payments,credit,returned,paid,net:ymR2(credit-returned-paid),balance:Math.max(0,ymR2(credit-returned-paid))};
 }
-function supplierDebtData(vid){
-  const purchases=(db.purchases||[]).filter(x=>String(x.supplierId??'')===String(vid) && x.pay==='آجل');
-  const returns=(db.supplierReturns||[]).filter(x=>String(x.supplierId??'')===String(vid));
-  const payments=(db.supplierPayments||[]).filter(x=>String(x.supplierId??'')===String(vid));
+function supplierDebtData(vid,store){
+  const purchases=(db.purchases||[]).filter(x=>String(x.supplierId??'')===String(vid) && x.pay==='آجل' && (!store||ymStmtStore(x)===store));
+  const returns=(db.supplierReturns||[]).filter(x=>String(x.supplierId??'')===String(vid) && (!store||ymStmtStore(x)===store));
+  const payments=(db.supplierPayments||[]).filter(x=>String(x.supplierId??'')===String(vid) && (!store||ymStmtStore(x)===store));
   const credit=purchases.reduce((a,x)=>a+debtNum(x.total),0);
   const returned=returns.reduce((a,x)=>a+debtNum(x.total),0);
   const paid=payments.reduce((a,x)=>a+debtNum(x.amount),0);
@@ -6225,12 +6242,14 @@ function renderCustomerDebts(){
   const box=document.getElementById('customerDebtsList'),sum=document.getElementById('customerDebtSummary'); if(!box)return;
   const q=(document.getElementById('cdSearch')?.value||'').trim().toLowerCase(), status=document.getElementById('cdStatus')?.value||'all';
   let totalDebt=0,totalCredit=0,totalPaid=0;
-  const rows=(db.customers||[]).map(c=>{const d=customerDebtData(c.id);totalDebt+=d.balance;totalCredit+=d.credit;totalPaid+=d.paid;return {c,d};}).filter(x=>{
+  const __cs=ymDebtStoreSel('customer');
+  const rows=(db.customers||[]).map(c=>{const d=customerDebtData(c.id,__cs);totalDebt+=d.balance;totalCredit+=d.credit;totalPaid+=d.paid;return {c,d};}).filter(x=>{
     const okQ=!q||[x.c.name,x.c.phone,x.c.address].some(v=>String(v||'').toLowerCase().includes(q));
     const okS=status==='all'||(status==='debt'?x.d.balance>0:x.d.balance<=0);
-    return okQ&&okS;
+    const okA=!__cs||x.d.sales.length||x.d.allReturns.length||x.d.payments.length;
+    return okQ&&okS&&okA;
   });
-  sum.innerHTML=debtCard('إجمالي الديون المستحقة على الزبائن',totalDebt)+debtCard('إجمالي المبيعات الآجلة',totalCredit)+debtCard('إجمالي المدفوعات',totalPaid)+(()=>{const o=(db.customers||[]).reduce((a,c)=>a+Math.max(0,-customerDebtData(c.id).net),0);return o>0?debtCard('أرصدة دائنة للزبائن (دفعات زائدة)',o):'';})();
+  sum.innerHTML=debtCard('إجمالي الديون المستحقة على الزبائن',totalDebt)+debtCard('إجمالي المبيعات الآجلة',totalCredit)+debtCard('إجمالي المدفوعات',totalPaid)+(()=>{const o=(db.customers||[]).reduce((a,c)=>a+Math.max(0,-customerDebtData(c.id,__cs).net),0);return o>0?debtCard('أرصدة دائنة للزبائن (دفعات زائدة)',o):'';})();
   if(!rows.length){box.innerHTML='<div class="muted">لا توجد بيانات ديون للزبائن.</div>';return;}
   box.innerHTML=`<table><tr><th>الزبون</th><th>المبيعات الآجلة</th><th>المرتجعات</th><th>المدفوع</th><th>الدين الحالي</th><th>موعد السداد</th><th>الحالة</th><th>إجراء</th></tr>${rows.map(({c,d})=>`<tr><td><b>${esc(c.name)}</b><br><span class="muted">${esc(c.phone||'')}</span></td><td>${moneyC(d.credit,'SYP')}</td><td>${moneyC(d.returned,'SYP')}</td><td>${moneyC(d.paid,'SYP')}</td><td class="${d.balance>0?'bad':'ok'}"><b>${moneyC(d.balance,'SYP')}</b></td><td>${ymNextDue('customer',c.id,d.balance)}</td><td>${d.balance>0?'عليه دين':(d.net<0?'رصيد دائن: '+moneyC(-d.net,'SYP'):'مسدد')}</td><td><button class="secondary" onclick="openCustomerDebtDetails(${c.id})">📋 التفاصيل</button> <button class="secondary" onclick="printCustomerDebtStatement(${c.id})">🖨️ كشف</button></td></tr>`).join('')}</table>`;
 }
@@ -6238,7 +6257,8 @@ function renderSupplierDebts(){
   const box=document.getElementById('supplierDebtsList'),sum=document.getElementById('supplierDebtSummary'); if(!box)return;
   const q=(document.getElementById('sdSearch')?.value||'').trim().toLowerCase(), status=document.getElementById('sdStatus')?.value||'all';
   let totalDebt=0,totalCredit=0,totalPaid=0;
-  const rows=(db.suppliers||[]).map(v=>{const d=supplierDebtData(v.id);totalDebt+=d.balance;totalCredit+=d.credit;totalPaid+=d.paid;return {v,d};}).filter(x=>{const okQ=!q||[x.v.name,x.v.phone,x.v.address].some(v=>String(v||'').toLowerCase().includes(q));const okS=status==='all'||(status==='debt'?x.d.balance>0:x.d.balance<=0);return okQ&&okS;});
+  const __ss=ymDebtStoreSel('supplier');
+  const rows=(db.suppliers||[]).map(v=>{const d=supplierDebtData(v.id,__ss);totalDebt+=d.balance;totalCredit+=d.credit;totalPaid+=d.paid;return {v,d};}).filter(x=>{const okQ=!q||[x.v.name,x.v.phone,x.v.address].some(v=>String(v||'').toLowerCase().includes(q));const okS=status==='all'||(status==='debt'?x.d.balance>0:x.d.balance<=0);const okA=!__ss||x.d.purchases.length||x.d.returns.length||x.d.payments.length;return okQ&&okS&&okA;});
   sum.innerHTML=debtCard('إجمالي ديون الموردين',totalDebt)+debtCard('إجمالي المشتريات الآجلة',totalCredit)+debtCard('إجمالي ما تم دفعه للموردين',totalPaid);
   if(!rows.length){box.innerHTML='<div class="muted">لا توجد بيانات ديون للموردين.</div>';return;}
   box.innerHTML=`<table><tr><th>المورد</th><th>المشتريات الآجلة</th><th>المرتجعات</th><th>المدفوع</th><th>الدين الحالي</th><th>موعد السداد</th><th>الحالة</th><th>إجراء</th></tr>${rows.map(({v,d})=>`<tr><td><b>${esc(v.name)}</b><br><span class="muted">${esc(v.phone||'')}</span></td><td>${moneyC(d.credit,'SYP')}</td><td>${moneyC(d.returned,'SYP')}</td><td>${moneyC(d.paid,'SYP')}</td><td class="${d.balance>0?'bad':'ok'}"><b>${moneyC(d.balance,'SYP')}</b></td><td>${ymNextDue('supplier',v.id,d.balance)}</td><td>${d.balance>0?'له علينا':(d.net<0?'رصيد لنا عنده: '+moneyC(-d.net,'SYP'):'مسدد')}</td><td><button class="secondary" onclick="openSupplierDebtDetails(${v.id})">📋 التفاصيل</button> <button class="secondary" onclick="printSupplierDebtStatement(${v.id})">🖨️ كشف</button></td></tr>`).join('')}</table>`;
@@ -6247,7 +6267,7 @@ function debtModal(title,html){
   document.getElementById('debtDetailModal')?.remove(); const m=document.createElement('div');m.id='debtDetailModal';m.className='enh-modal';m.style.display='flex';m.innerHTML=`<div class="box" style="max-width:1000px"><h3>${title}</h3>${html}<div class="enh-actions"><button class="secondary" onclick="document.getElementById('debtDetailModal').remove()">إغلاق</button></div></div>`;document.body.appendChild(m);
 }
 function openCustomerDebtDetails(cid){
-  const c=db.customers.find(x=>sameCustomerId(x.id,cid)); if(!c)return; const d=customerDebtData(cid);
+  const c=db.customers.find(x=>sameCustomerId(x.id,cid)); if(!c)return; const d=customerDebtData(cid,ymDebtStoreSel('customer'));
   const pi=ymPartyInvoices('customer',cid);
   const dt=v=>ymEsc(new Date(v).toLocaleDateString(currentLang));
   const rows=pi.inv.map(v=>{
@@ -6263,7 +6283,7 @@ function openCustomerDebtDetails(cid){
 }
 function printCustomerDebtStatement(cid){
   const c=(db.customers||[]).find(x=>sameCustomerId(x.id,cid)); if(!c) return;
-  const d=customerDebtData(cid);
+  const d=customerDebtData(cid,ymDebtStoreSel('customer'));
   const ev=[]
     .concat(d.sales.map(x=>({date:x.date,ref:String(x.invoiceId||x.id),type:'بيع آجل',name:x.name||'',qty:x.qty||0,debit:debtNum(x.total),credit:0})))
     .concat((d.returns||[]).map(x=>({date:x.date,ref:'مرتجع-'+x.id,type:'مرتجع',name:x.name||'',qty:x.qty||0,debit:0,credit:debtNum(x.total)})))
@@ -6278,7 +6298,7 @@ function printCustomerDebtStatement(cid){
   doPrint('كشف حساب تفصيلي للزبون',`<h1>اليمان للتجارة</h1><h2>كشف حساب تفصيلي للزبون</h2><div class="head"><span>تاريخ الطباعة: ${new Date().toLocaleString(currentLang)}</span></div><p>الزبون: <b>${ymEsc(c.name)}</b></p><table><tr><th>التاريخ</th><th>المرجع</th><th>النوع</th><th>البيان</th><th>الكمية</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr>${rows||'<tr><td colspan="8">لا توجد حركات.</td></tr>'}</table><p>المبيعات الآجلة: ${moneyC(d.credit,'SYP')} — المرتجعات: ${moneyC(d.returned,'SYP')} — المدفوع: ${moneyC(d.paid,'SYP')}</p><p class="total">الدين الحالي: ${moneyC(d.balance,'SYP')}</p>${sRows?`<p>مواعيد السداد:</p><table><tr><th>التاريخ</th><th>الفاتورة</th><th>المبلغ</th></tr>${sRows}</table>`:''}`,true);
 }
 function openSupplierDebtDetails(vid){
-  const v=db.suppliers.find(x=>String(x.id)===String(vid)); if(!v)return; const d=supplierDebtData(vid);
+  const v=db.suppliers.find(x=>String(x.id)===String(vid)); if(!v)return; const d=supplierDebtData(vid,ymDebtStoreSel('supplier'));
   const pi=ymPartyInvoices('supplier',vid);
   const dt=x=>ymEsc(new Date(x).toLocaleDateString(currentLang));
   const rows=pi.inv.map(iv=>{
@@ -6362,7 +6382,7 @@ function openSupplierReturnNotice(id){
 }
 function printSupplierDebtStatement(vid){
   const v=(db.suppliers||[]).find(x=>String(x.id)===String(vid)); if(!v) return;
-  const d=supplierDebtData(vid);
+  const d=supplierDebtData(vid,ymDebtStoreSel('supplier'));
   const ev=[]
     .concat(d.purchases.map(x=>({date:x.date,ref:String(x.invoiceNo||x.id),type:'شراء آجل',name:x.name||'',qty:x.qty||0,debit:debtNum(x.total),credit:0})))
     .concat((d.returns||[]).map(x=>({date:x.date,ref:'مرتجع-'+x.id,type:'ترجيع إلى المورد',name:x.name||'',qty:x.qty||0,debit:0,credit:debtNum(x.total)})))
@@ -6377,9 +6397,9 @@ function printSupplierDebtStatement(vid){
 
 /* طباعة الدفعات (سند + كشف) للزبائن والموردين */
 function __debtPayCtx(kind,id){
-  if(kind==='customer'){ const c=(db.customers||[]).find(x=>sameCustomerId(x.id,id)); if(!c) return null; const d=customerDebtData(id);
+  if(kind==='customer'){ const c=(db.customers||[]).find(x=>sameCustomerId(x.id,id)); if(!c) return null; const d=customerDebtData(id,ymDebtStoreSel('customer'));
     return {party:c.name,lbl:'الزبون',list:d.payments,cur:()=>'SYP',balance:d.balance,def:'دفعة زبون',title:'كشف الدفعات المستلمة من الزبون',rcpt:'سند قبض',dir:'استلمنا من'}; }
-  const v=(db.suppliers||[]).find(x=>String(x.id)===String(id)); if(!v) return null; const d=supplierDebtData(id);
+  const v=(db.suppliers||[]).find(x=>String(x.id)===String(id)); if(!v) return null; const d=supplierDebtData(id,ymDebtStoreSel('supplier'));
   return {party:v.name,lbl:'المورد',list:d.payments||[],cur:x=>txCurrency(x),balance:d.balance,def:'دفعة للمورد',title:'كشف الدفعات المدفوعة للمورد',rcpt:'سند دفع',dir:'دفعنا إلى'};
 }
 function printDebtPayments(kind,id){
@@ -6872,30 +6892,34 @@ function render() {
   db.employees = db.employees || [];
   db.salaryTransactions = db.salaryTransactions || [];
   db.attendanceRecords = db.attendanceRecords || [];
-  attendanceEmployee.innerHTML = `<option value="0">${t('empSelect')}</option>` + db.employees.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');
-  const attendanceSummary = db.employees.map(e => {
+  attendanceEmployee.innerHTML = `<option value="0">${t('empSelect')}</option>` + db.employees.map(x=>`<option value="${x.id}">${esc(x.name)}${ymStmtMulti()?' ['+esc(ymEmpStore(x))+']':''}</option>`).join('');
+  const __attRecs = db.attendanceRecords.filter(x => ymEmpVisible(db.employees.find(e=>e.id===x.employeeId), 'attStoreFilter'));
+  const attendanceSummary = db.employees.filter(e => ymEmpVisible(e,'attStoreFilter')).map(e => {
     const r = db.attendanceRecords.filter(x=>x.employeeId===e.id);
     const leave = annualLeaveDays(e);
     return {e,r, present:r.filter(x=>x.type==='حضور').length, absent:r.filter(x=>x.type==='غياب').length, official:r.filter(x=>x.type==='عطلة رسمية').length, annual:r.filter(x=>x.type==='إجازة سنوية').length, overtimeHours:r.filter(x=>x.type==='ساعات إضافية').reduce((a,x)=>a+(+x.hours||0),0), overtimeTotal:r.filter(x=>x.type==='ساعات إضافية').reduce((a,x)=>a+(+(x.overtimeAmount||overtimePay(e,x.hours)||0)),0), years:leave.years, entitled:leave.days, deduction:r.reduce((a,x)=>a+(+x.deduction||0),0)};
   });
-  attendanceList.innerHTML = db.attendanceRecords.length ? `<table><tr><th>${empTableT('التاريخ','Date','Tarih')}</th><th>${empUI('employee')}</th><th>${empTableT('الحالة','Status','Durum')}</th><th>${empTableT('الخصم','Deduction','Kesinti')}</th><th>${empTableT('ملاحظة','Note','Not')}</th></tr>` +
-    db.attendanceRecords.slice(0,200).map(x=>{const e=db.employees.find(e=>e.id===x.employeeId);return `<tr><td>${esc(x.date)}</td><td>${esc(e?e.name:'-')}</td><td>${esc(empTypeLabel(x.type))}</td><td>${money(x.deduction||0)}</td><td>${esc(x.note||'')}</td></tr>`}).join('') +
-    `<tr><th colspan="3">${empUI('totalAbsenceDeductions')}</th><th>${money(db.attendanceRecords.reduce((a,x)=>a+(+x.deduction||0),0))}</th><th></th></tr></table>
+  attendanceList.innerHTML = __attRecs.length ? `<table><tr><th>${empTableT('التاريخ','Date','Tarih')}</th><th>${empUI('employee')}</th><th>${empTableT('الحالة','Status','Durum')}</th><th>${empTableT('الخصم','Deduction','Kesinti')}</th><th>${empTableT('ملاحظة','Note','Not')}</th></tr>` +
+    __attRecs.slice(0,200).map(x=>{const e=db.employees.find(e=>e.id===x.employeeId);return `<tr><td>${esc(x.date)}</td><td>${esc(e?e.name:'-')}${ymEmpTag(e)}</td><td>${esc(empTypeLabel(x.type))}</td><td>${money(x.deduction||0)}</td><td>${esc(x.note||'')}</td></tr>`}).join('') +
+    `<tr><th colspan="3">${empUI('totalAbsenceDeductions')}</th><th>${money(__attRecs.reduce((a,x)=>a+(+x.deduction||0),0))}</th><th></th></tr></table>
     <h4>${empUI('employeeSummary')}</h4><table><tr><th>${empUI('employee')}</th><th>${empUI('serviceYears')}</th><th>${empUI('annualEntitlement')}</th><th>${empUI('used')}</th><th>${empUI('remaining')}</th><th>${empUI('present')}</th><th>${empUI('absent')}</th><th>${empUI('officialHolidays')}</th><th>${empUI('totalDeduction')}</th><th>ساعات إضافية</th><th>قيمة إضافية</th><th>${empUI('estimatedNetSalary')}</th></tr>`+
     attendanceSummary.map(x=>{
       const entitledText = x.entitled === null ? empUI('notSpecified') : x.entitled + ' ' + empUI('day');
       const remainingText = x.entitled === null ? empUI('notSpecified') : Math.max(0, x.entitled - x.annual) + ' ' + empUI('day');
-      return `<tr><td>${esc(x.e.name)}</td><td>${x.years === null ? '-' : x.years}</td><td>${entitledText}</td><td>${x.annual} ${empUI('day')}</td><td>${remainingText}</td><td>${x.present}</td><td>${x.absent}</td><td>${x.official}</td><td>${money(x.deduction)}</td><td>${x.overtimeHours}</td><td>${money(x.overtimeTotal)}</td><td>${money(ymMonthNet(x.e))}</td></tr>`;
+      return `<tr><td>${esc(x.e.name)}${ymEmpTag(x.e)}</td><td>${x.years === null ? '-' : x.years}</td><td>${entitledText}</td><td>${x.annual} ${empUI('day')}</td><td>${remainingText}</td><td>${x.present}</td><td>${x.absent}</td><td>${x.official}</td><td>${money(x.deduction)}</td><td>${x.overtimeHours}</td><td>${money(x.overtimeTotal)}</td><td>${money(ymMonthNet(x.e))}</td></tr>`;
     }).join('')+`</table><p class="muted">${empUI('leaveSystem')}</p>`
     : `<div class="muted">${empUI('noAttendance')}</div>`;
-  salaryEmployee.innerHTML = `<option value="0">${t('empSelect')}</option>` + db.employees.map(x=>`<option value="${x.id}">${esc(x.name)} — الراتب: ${money(x.salary)}</option>`).join('');
-  employeeDetailSelect.innerHTML = `<option value="0">${empUI('selectDetail')}</option>` + db.employees.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');
+  salaryEmployee.innerHTML = `<option value="0">${t('empSelect')}</option>` + db.employees.map(x=>`<option value="${x.id}">${esc(x.name)}${ymStmtMulti()?' ['+esc(ymEmpStore(x))+']':''} — الراتب: ${money(x.salary)}</option>`).join('');
+  employeeDetailSelect.innerHTML = `<option value="0">${empUI('selectDetail')}</option>` + db.employees.map(x=>`<option value="${x.id}">${esc(x.name)}${ymStmtMulti()?' ['+esc(ymEmpStore(x))+']':''}</option>`).join('');
   renderEmployeeDetail();
 
-  employeesList.innerHTML = db.employees.length ? `<table><tr><th>${empUI('employee')}</th><th>${empTableT('تاريخ بدء الخدمة','Service Start Date','Hizmet Başlangıç Tarihi')}</th><th>${empUI('serviceYears')}</th><th>${empTableT('الإجازة السنوية المستحقة','Annual Leave Entitlement','Yıllık İzin Hakkı')}</th><th>${empTableT('الراتب الأساسي','Basic Salary','Temel Maaş')}</th><th>${t('thAction')}</th></tr>` + db.employees.map(x=>{const leave=annualLeaveDays(x); return `<tr><td>${esc(x.name)}</td><td>${esc(x.serviceStart||'-')}</td><td>${leave.years===null?'-':leave.years}</td><td>${leave.days===null?empTableT('غير محدد','Not specified','Belirtilmemiş'):leave.days+' '+empTableT('يوم','day(s)','gün')}</td><td>${money(x.salary)}</td><td><button class="danger" onclick="del('employees',${x.id})">${empUI('delete')}</button></td></tr>`}).join('') + `</table>` : `<div class="muted">${empUI('noEmployees')}</div>`;
-  salaryList.innerHTML = db.salaryTransactions.length ? `<table><tr><th>${empTableT('التاريخ','Date','Tarih')}</th><th>${empUI('employee')}</th><th>${empTableT('النوع','Type','Tür')}</th><th>${empTableT('المبلغ','Amount','Tutar')}</th><th>${empTableT('ملاحظة','Note','Not')}</th></tr>` + db.salaryTransactions.slice(0,100).map(x=>{const e=db.employees.find(e=>e.id===x.employeeId); return `<tr><td>${new Date(x.date).toLocaleDateString(currentLang)}</td><td>${esc(e?e.name:'-')}</td><td>${esc(empTypeLabel(x.type))}</td><td>${money(x.amount)}</td><td>${esc(x.note||'')}</td></tr>`}).join('') + `</table>` : `<div class="muted">${empUI('noSalaryOps')}</div>`;
+  const __empShown = db.employees.filter(e => ymEmpVisible(e,'empListStore'));
+  employeesList.innerHTML = __empShown.length ? `<table><tr><th>${empUI('employee')}</th><th>🏬</th><th>${empTableT('تاريخ بدء الخدمة','Service Start Date','Hizmet Başlangıç Tarihi')}</th><th>${empUI('serviceYears')}</th><th>${empTableT('الإجازة السنوية المستحقة','Annual Leave Entitlement','Yıllık İzin Hakkı')}</th><th>${empTableT('الراتب الأساسي','Basic Salary','Temel Maaş')}</th><th>${t('thAction')}</th></tr>` + __empShown.map(x=>{const leave=annualLeaveDays(x); return `<tr><td>${esc(x.name)}</td><td>${ymEsc(ymEmpStore(x))}</td><td>${esc(x.serviceStart||'-')}</td><td>${leave.years===null?'-':leave.years}</td><td>${leave.days===null?empTableT('غير محدد','Not specified','Belirtilmemiş'):leave.days+' '+empTableT('يوم','day(s)','gün')}</td><td>${money(x.salary)}</td><td><button class="danger" onclick="del('employees',${x.id})">${empUI('delete')}</button>${ymStoreList().length>1?`<select class="ym-move-sel" onchange="ymMoveEmployee(${x.id},this.value)"><option value="">نقل إلى…</option>${ymStoreList().filter(n=>n!==ymEmpStore(x)).map(n=>`<option value="${ymEsc(n)}">${ymEsc(n)}</option>`).join('')}</select>`:''}</td></tr>`}).join('') + `</table>` : `<div class="muted">${empUI('noEmployees')}</div>`;
+  const __salRecs = db.salaryTransactions.filter(x => ymEmpVisible(db.employees.find(e=>e.id===x.employeeId), 'salaryStoreFilter'));
+  salaryList.innerHTML = __salRecs.length ? `<table><tr><th>${empTableT('التاريخ','Date','Tarih')}</th><th>${empUI('employee')}</th><th>${empTableT('النوع','Type','Tür')}</th><th>${empTableT('المبلغ','Amount','Tutar')}</th><th>${empTableT('ملاحظة','Note','Not')}</th></tr>` + __salRecs.slice(0,100).map(x=>{const e=db.employees.find(e=>e.id===x.employeeId); return `<tr><td>${new Date(x.date).toLocaleDateString(currentLang)}</td><td>${esc(e?e.name:'-')}${ymEmpTag(e)}</td><td>${esc(empTypeLabel(x.type))}</td><td>${money(x.amount)}</td><td>${esc(x.note||'')}</td></tr>`}).join('') + `</table>` : `<div class="muted">${empUI('noSalaryOps')}</div>`;
 
-  expensesList.innerHTML = db.expenses.length ? `<table><tr><th>${t('thDate')}</th><th>${t('lblExpenses')}</th><th>${t('phAmount')}</th><th>العملة</th></tr>` + db.expenses.slice(0, 40).map(x => `<tr><td>${new Date(x.date).toLocaleDateString(currentLang)}</td><td>${esc(x.name)}${ymStoreTag(x)}</td><td>${moneyC(x.amount,txCurrency(x))}</td></tr>`).join('') + '</table>' : `<div class="muted">${t('msgNoExp')}</div>`;
+  const __expShown = db.expenses.filter(x => !ymStmtSel('expStoreFilter') || ymStmtStore(x) === ymStmtSel('expStoreFilter'));
+  expensesList.innerHTML = __expShown.length ? `<table><tr><th>${t('thDate')}</th><th>${t('lblExpenses')}</th><th>${t('phAmount')}</th><th>العملة</th></tr>` + __expShown.slice(0, 40).map(x => `<tr><td>${new Date(x.date).toLocaleDateString(currentLang)}</td><td>${esc(x.name)}${ymStoreList().length>1?ymStoreTag({store:ymStmtStore(x)}):''}</td><td>${moneyC(x.amount,txCurrency(x))}</td></tr>`).join('') + '</table>' : `<div class="muted">${t('msgNoExp')}</div>`;
 
   let y = new Date().getFullYear();
   year.innerHTML = [y - 2, y - 1, y, y + 1].map(v => `<option ${v === y ? 'selected' : ''}>${v}</option>`).join('');
@@ -9554,7 +9578,7 @@ window.addEventListener('load',function(){
   function entries(kind,id){
     var out=[],d;
     if(kind==='customer'){
-      d=customerDebtData(id);
+      d=customerDebtData(id,ymDebtStoreSel('customer'));
       var inv={};
       d.sales.forEach(function(x){var k=x.invoiceId||x.id;(inv[k]=inv[k]||[]).push(x);});
       Object.keys(inv).forEach(function(k){
@@ -9564,7 +9588,7 @@ window.addEventListener('load',function(){
       d.returns.forEach(function(r){out.push({date:r.date,ref:'مرتجع-'+(r.id==null?'':r.id),desc:'مرتجع — '+(r.name||''),debit:0,credit:debtNum(r.total)});});
       d.payments.forEach(function(p){out.push({date:p.date,ref:'سند قبض '+(p.receiptNo||p.id||''),desc:'دفعة مقبوضة'+(p.note?' — '+p.note:''),debit:0,credit:debtNum(p.amount)});});
     }else{
-      d=supplierDebtData(id);
+      d=supplierDebtData(id,ymDebtStoreSel('supplier'));
       d.purchases.forEach(function(x){out.push({date:x.date,ref:String(x.invoiceNo||x.id),desc:'شراء آجل — '+(x.name||''),debit:debtNum(x.total),credit:0});});
       d.returns.forEach(function(r){out.push({date:r.date,ref:'مرتجع-'+(r.id==null?'':r.id),desc:'ترجيع إلى المورد — '+(r.name||''),debit:0,credit:debtNum(r.total)});});
       d.payments.forEach(function(p){out.push({date:p.date,ref:'سند دفع '+(p.receiptNo||p.id||''),desc:'دفعة مدفوعة'+(p.note?' — '+p.note:''),debit:0,credit:debtNum(p.amount)});});
