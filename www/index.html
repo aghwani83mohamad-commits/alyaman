@@ -131,6 +131,7 @@ var D={"رقم فاتورة المورد": "Tedarikçi fatura no", "خيارات
 Object.assign(D,{"المتجر": "Mağaza", "المتجر الأم": "Ana mağaza", "المتجر الأم (الأول)": "Ana mağaza (birinci)", "المتجر الثاني": "İkinci mağaza", "🏬 المتاجر": "🏬 Mağazalar", "المتاجر": "Mağazalar", "إعداد المتاجر": "Mağaza ayarları", "عدد المتاجر": "Mağaza sayısı", "اسم المتجر": "Mağaza adı", "💾 حفظ المتاجر": "💾 Mağazaları kaydet", "المتجر الأول هو المتجر الأم والبقية متاجر فرعية. حدّد عدد المتاجر ثم اكتب اسم كل متجر (يمكن ترك الاسم فارغاً ليأخذ اسماً تلقائياً). بعدها تختار المتجر في نموذج المبيعات والمشتريات عند كل عملية، وتظهر حركة المتاجر الفرعية في قسم خاص بالتقرير الشامل.": "Birinci mağaza ana mağazadır, diğerleri şube mağazalardır. Mağaza sayısını belirleyin, sonra her mağazanın adını yazın (ad boş bırakılırsa otomatik bir ad verilir). Ardından her işlemde satış ve alış formundan mağazayı seçersiniz; şube mağazaların hareketleri kapsamlı raporda ayrı bir bölümde görünür.", "لا يمكن تكرار اسم المتجر: ": "Mağaza adı tekrar edilemez: ", "تم حفظ المتاجر. عدد المتاجر الآن: ": "Mağazalar kaydedildi. Şu anki mağaza sayısı: ", "🏬 تقارير اليومية المتاجر الفرعية الأخرى": "🏬 Diğer şube mağazaların günlük raporları", "تقارير اليومية المتاجر الفرعية الأخرى": "Diğer şube mağazaların günlük raporları", "لا توجد متاجر فرعية. أضفها من الإضافات ➜ المتاجر.": "Şube mağaza yok. Eklentiler ➜ Mağazalar bölümünden ekleyin.", "الفرق (مبيعات − مشتريات)": "Fark (satışlar − alışlar)", "لا توجد حركات بيع أو شراء لهذا المتجر": "Bu mağaza için satış veya alış hareketi yok", "🛒 المبيعات": "🛒 Satışlar", "📦 المشتريات": "📦 Alışlar", "المتجر 2": "Mağaza 2", "اسم المتجر 2": "Mağaza adı 2", "المتجر 3": "Mağaza 3", "اسم المتجر 3": "Mağaza adı 3", "المتجر 4": "Mağaza 4", "اسم المتجر 4": "Mağaza adı 4", "المتجر 5": "Mağaza 5", "اسم المتجر 5": "Mağaza adı 5", "المتجر 6": "Mağaza 6", "اسم المتجر 6": "Mağaza adı 6", "المتجر 7": "Mağaza 7", "اسم المتجر 7": "Mağaza adı 7", "المتجر 8": "Mağaza 8", "اسم المتجر 8": "Mağaza adı 8", "المتجر 9": "Mağaza 9", "اسم المتجر 9": "Mağaza adı 9", "المتجر 10": "Mağaza 10", "اسم المتجر 10": "Mağaza adı 10"});
 Object.assign(D,{"🛒 المبيعات (حركة البيع)": "🛒 Satışlar (satış hareketleri)", "📦 المشتريات (حركة الشراء)": "📦 Alışlar (alış hareketleri)", "↩️ المرتجعات": "↩️ İadeler", "💸 المصروفات": "💸 Giderler", "👥 الموظفون (معاشات وسلف ومكافآت)": "👥 Çalışanlar (maaşlar, avanslar ve primler)", "💵 حركة الصندوق (مختصر)": "💵 Kasa hareketi (özet)", "مقدار المبيعات": "Satış tutarı", "مقدار المشتريات": "Alış tutarı", "مقدار المصروفات": "Gider tutarı", "البند": "Kalem", "لا توجد حركات لهذا المتجر": "Bu mağaza için hareket yok", "الموظفين": "Çalışanlar"});
 Object.assign(D,{"كل المتاجر": "Tüm mağazalar"});
+Object.assign(D,{"أرصدة المتاجر": "Mağaza bakiyeleri", "اضغط على متجر لاختياره للسحب أو الإيداع": "Çekim veya yatırma için bir mağazaya dokunun", "صافي رصيد المتجر الحالي": "Mağazanın mevcut net bakiyesi", "بعد السحب يبقى في المتجر": "Çekimden sonra mağazada kalan", "بعد الإيداع يصبح رصيد المتجر": "Yatırmadan sonra mağaza bakiyesi"});
 var AR=/[؀-ۿ]/,DIG={'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9','٫':',','٬':'.'};
 var active=false,re=null,cache=new Map();
 function esc(s){return s.replace(/[.*+?^${}()|[\]\\\/]/g,'\\$&')}
@@ -2839,7 +2840,12 @@ function bcPick(m){
       <div class="card"><span>مسحوبات من الصندوق (−)</span><b id="cbWd">0</b></div>
       <div class="card" style="outline:2px solid #1b7f4b"><span><b style="display:inline;font-size:inherit">صافي الصندوق النقدي</b></span><b id="cbNet">0</b></div>
     </div>
+    <div id="cbStoresWrap" style="display:none;margin-bottom:10px">
+      <div class="muted" style="margin-bottom:6px">🏬 أرصدة المتاجر (اضغط على متجر لاختياره للسحب أو الإيداع)</div>
+      <div class="cards" id="cbStoreCards"></div>
+    </div>
     <div class="row">
+      <div id="cbStoreBox" style="display:none"><label>🏬 المتجر</label><select id="cbStore" onchange="cashBoxPreview()"></select></div>
       <div><label>نوع الحركة</label>
         <select id="cbType" onchange="cashBoxPreview()">
           <option value="withdraw">سحب مبلغ من الصندوق</option>
@@ -9273,32 +9279,63 @@ window.addEventListener('load',function(){
 (function(){
   const $ = id => document.getElementById(id);
   const mvs = () => (db.cashMovements = db.cashMovements || []);
-  function totals(){
-    const sum = t => mvs().filter(x => x.type === t).reduce((a, x) => a + (+x.amount || 0), 0);
-    const ops = +window.__opsCash || 0, dep = sum('deposit'), wd = sum('withdraw');
+  const storesL = () => (typeof ymStoreList === 'function') ? ymStoreList() : [];
+  const sumA = (arr, f) => arr.reduce((a, x) => a + (+f(x) || 0), 0);
+  // رصيد العمليات النقدية لمتجر واحد (نفس معادلة render() لكن مقيّدة بالمتجر؛ القيود القديمة بلا متجر تتبع المتجر الأم)
+  function storeOps(name){
+    const first = storesL()[0];
+    const inS = x => ((x && x.store) || first) === name;
+    const act = (db.sales || []).filter(x => !x.cancelled && inS(x));
+    const rets = ymActiveReturns().filter(inS);
+    const pur = (db.purchases || []).filter(inS);
+    const ee = sumA((db.expenses || []).filter(inS), x => x.amount)
+      + sumA((db.salaryTransactions || []).filter(x => (x.type === 'راتب' || x.type === 'مكافأة') && inS(x)), x => x.amount);
+    return sumA(act.filter(x => !isCreditSale(x)), x => x.total)
+      - sumA(rets.filter(r => !ymReturnIsCredit(r)), x => x.total)
+      - sumA(pur, x => x.total) + sumA(pur.filter(x => x.pay === 'آجل'), x => x.total)
+      - ee
+      + sumA((db.customerPayments || []).filter(inS), x => x.amount)
+      - sumA((db.supplierPayments || []).filter(inS), x => x.amount)
+      + (db.supplierReturns || []).filter(inS).reduce((a, x) => a + supplierReturnRefund(x), 0);
+  }
+  function totals(store){
+    const first = storesL()[0];
+    const pool = store ? mvs().filter(x => ((x.store) || first) === store) : mvs();
+    const sum = t => pool.filter(x => x.type === t).reduce((a, x) => a + (+x.amount || 0), 0);
+    const ops = store ? storeOps(store) : (+window.__opsCash || 0), dep = sum('deposit'), wd = sum('withdraw');
     return { ops, dep, wd, net: ops + dep - wd };
   }
+  const multi = () => storesL().length > 1;
+  const selStore = () => { const el = $('cbStore'); return (multi() && el && el.value) ? el.value : ''; };
+  window.cbPickStore = function(i){
+    const el = $('cbStore'), l = storesL(); if (!el || !l[i]) return;
+    el.value = l[i]; cashBoxPreview();
+    const t = $('cbAmount'); if (t && t.focus) t.focus();
+  };
   window.cashBoxPreview = function(){
-    const type = $('cbType').value, raw = $('cbAmount').value, v = +raw || 0, tt = totals();
+    const type = $('cbType').value, raw = $('cbAmount').value, v = +raw || 0, sn = selStore(), tt = totals(sn);
     $('cbAmountLbl').textContent = type === 'withdraw' ? 'المبلغ المسحوب' : type === 'deposit' ? 'المبلغ المودَع' : 'المبلغ الذي يبقى في الصندوق';
-    let msg = 'صافي الصندوق الحالي: ' + money(tt.net);
+    const sx = sn ? ' (🏬 ' + sn + ')' : '';
+    let msg = (sn ? 'صافي رصيد المتجر الحالي' + sx + ': ' : 'صافي الصندوق الحالي: ') + money(tt.net);
     if (raw !== '') {
-      if (type === 'withdraw') msg = 'بعد السحب يبقى في الصندوق: ' + money(tt.net - v);
-      else if (type === 'deposit') msg = 'بعد الإيداع يصبح الصندوق: ' + money(tt.net + v);
-      else msg = tt.net > v ? 'سيُسحب: ' + money(tt.net - v) + ' ويبقى في الصندوق: ' + money(v) : 'لا يوجد زيادة لسحبها (الصندوق ' + money(tt.net) + ').';
+      if (type === 'withdraw') msg = (sn ? 'بعد السحب يبقى في المتجر' + sx : 'بعد السحب يبقى في الصندوق') + ': ' + money(tt.net - v);
+      else if (type === 'deposit') msg = (sn ? 'بعد الإيداع يصبح رصيد المتجر' + sx : 'بعد الإيداع يصبح الصندوق') + ': ' + money(tt.net + v);
+      else msg = tt.net > v ? 'سيُسحب: ' + money(tt.net - v) + ' ويبقى في الصندوق: ' + money(v) + sx : 'لا يوجد زيادة لسحبها (الصندوق ' + money(tt.net) + ').' + sx;
     }
     $('cbHint').textContent = msg;
   };
   window.addCashMovement = function(){
-    const type = $('cbType').value, raw = $('cbAmount').value, v = +raw || 0, note = $('cbNote').value.trim(), tt = totals();
+    const type = $('cbType').value, raw = $('cbAmount').value, v = +raw || 0, note = $('cbNote').value.trim(), sn = selStore(), tt = totals(sn);
     if (raw === '' || v < 0 || (type !== 'leave' && v <= 0)) return alert('أدخل مبلغاً صحيحاً');
     let kind = type, amt = v;
     if (type === 'leave') {
       amt = tt.net - v; kind = 'withdraw';
       if (amt <= 0) return alert(window.__TR?('Net kasa (' + money(tt.net) + ') bırakılması istenen tutarı aşmıyor; çekilecek tutar yok.'):('صافي الصندوق (' + money(tt.net) + ') لا يزيد عن المبلغ المطلوب تركه، لا يوجد ما يُسحب.'));
     }
-    if (kind === 'withdraw' && amt > tt.net && !confirm(window.__TR?('Çekilen tutar mevcut net kasadan (' + money(tt.net) + ') fazla. Devam etmek istiyor musunuz?'):('المبلغ المسحوب أكبر من صافي الصندوق الحالي (' + money(tt.net) + '). هل تريد المتابعة؟'))) return;
-    mvs().unshift({ id: Date.now(), type: kind, amount: amt, note: note || (type === 'leave' ? 'سحب الزائد وترك ' + money(v) + ' في الصندوق' : ''), currency: currencyCode(), date: now() });
+    if (kind === 'withdraw' && amt > tt.net && !confirm(window.__TR?((sn ? 'Çekilen tutar mağaza bakiyesinden (' : 'Çekilen tutar mevcut net kasadan (') + money(tt.net) + ') fazla. Devam etmek istiyor musunuz?'):((sn ? 'المبلغ المسحوب أكبر من رصيد المتجر الحالي (' : 'المبلغ المسحوب أكبر من صافي الصندوق الحالي (') + money(tt.net) + '). هل تريد المتابعة؟'))) return;
+    const mv = { id: Date.now(), type: kind, amount: amt, note: note || (type === 'leave' ? 'سحب الزائد وترك ' + money(v) + ' في الصندوق' : ''), currency: currencyCode(), date: now() };
+    if (sn) mv.store = sn;
+    mvs().unshift(mv);
     $('cbAmount').value = ''; $('cbNote').value = '';
     save();
   };
@@ -9310,6 +9347,18 @@ window.addEventListener('load',function(){
   function renderCashBox(){
     if (!$('cbNet')) return;
     const tt = totals();
+    const sl = storesL(), isMulti = sl.length > 1, cs = $('cbStore');
+    if (cs) {
+      const sig = sl.join('\u0001'), keep = cs.value;
+      if (cs.dataset.sig !== sig) { cs.innerHTML = sl.map(n => `<option value="${ymEsc(n)}">${ymEsc(n)}</option>`).join(''); cs.dataset.sig = sig; }
+      cs.value = sl.includes(keep) ? keep : (sl[0] || '');
+      $('cbStoreBox').style.display = isMulti ? '' : 'none';
+    }
+    const cw = $('cbStoresWrap');
+    if (cw) {
+      cw.style.display = isMulti ? '' : 'none';
+      if (isMulti) $('cbStoreCards').innerHTML = sl.map((n, i) => { const st = totals(n); return `<div class="card" style="cursor:pointer;${cs && cs.value === n ? 'outline:2px solid #1d6a8a' : ''}" onclick="cbPickStore(${i})"><span>🏬 ${ymEsc(n)}</span><b style="${st.net < 0 ? 'color:#b91c1c' : ''}">${money(st.net)}</b></div>`; }).join('');
+    }
     $('cbOps').textContent = money(tt.ops); $('cbDep').textContent = money(tt.dep);
     $('cbWd').textContent = money(tt.wd); $('cbNet').textContent = money(tt.net);
     $('cbNet').style.color = tt.net < 0 ? '#b91c1c' : '';
@@ -9318,7 +9367,7 @@ window.addEventListener('load',function(){
     if (dc) { dc.textContent = money(tt.net); dc.style.color = tt.net < 0 ? '#b91c1c' : ''; }
     const ds = $('dCashSub');
     if (ds) ds.innerHTML = 'من العمليات: ' + money(tt.ops) + '<br>مسحوبات: −' + money(tt.wd) + ' | إيداعات: +' + money(tt.dep);
-    const rows = mvs().slice(0, 30).map(x => `<tr><td>${new Date(x.date).toLocaleString((window.__TR?'tr-TR':'ar'))}</td><td>${x.type === 'withdraw' ? '⬇️ سحب' : '⬆️ إيداع'}</td><td>${money(x.amount)}</td><td>${esc(x.note)}</td><td><button class="danger" onclick="delCashMovement(${x.id})">حذف</button></td></tr>`).join('');
+    const rows = mvs().slice(0, 30).map(x => `<tr><td>${new Date(x.date).toLocaleString((window.__TR?'tr-TR':'ar'))}</td><td>${x.type === 'withdraw' ? '⬇️ سحب' : '⬆️ إيداع'}${isMulti ? ymStoreTag({ store: x.store || sl[0] }) : ''}</td><td>${money(x.amount)}</td><td>${esc(x.note)}</td><td><button class="danger" onclick="delCashMovement(${x.id})">حذف</button></td></tr>`).join('');
     const __rf=(db.cancelRefunds||[]).slice(0,30).map(x=>`<tr style="background:#fff3e0"><td>${new Date(x.date).toLocaleString((window.__TR?'tr-TR':'ar'))}</td><td>↩️ استرداد للزبون (إلغاء فاتورة ${esc(x.invoiceId)})</td><td>${money(x.amount)}</td><td>مخصوم تلقائياً من صافي الصندوق</td><td></td></tr>`).join('');
     $('cbList').innerHTML = (rows||__rf) ? '<table><tr><th>التاريخ</th><th>الحركة</th><th>المبلغ</th><th>ملاحظة</th><th></th></tr>' + __rf + rows + '</table>' : '<div class="muted">لا توجد حركات سحب أو إيداع بعد.</div>';
     const hb = $('cbHistBadge'); if (hb) hb.textContent = mvs().length;
