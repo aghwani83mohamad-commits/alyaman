@@ -9810,21 +9810,24 @@ window.addEventListener('load',function(){
   }
 
   /* ===== التقرير الشامل المبسّط: مبيعات | مشتريات | مرتجعات | مصروفات | موظفين | صندوق (مختصر) ===== */
-  function repParts(rows,showEmpty){
+  function repParts(rows,showEmpty,showStore){
+    var mainName=ymStoreList()[0];
+    function stc(m){return showStore?'<td><b>'+esc(m.store||mainName)+'</b></td>':''}
+    function sth(a){return showStore?a.concat(['المتجر']):a}
     function pick(ts){return rows.filter(function(m){return ts.indexOf(m.t)>=0})}
     function tm(){return mode==='day'?'الوقت':'التاريخ'}
     function when(m){return mode==='day'?(m.time?timeOf(m.ts):'—'):(dateOf(m.ts)+(m.time?' '+timeOf(m.ts):''))}
     function sumOf(list){var t={};list.forEach(function(m){addTo(t,m.cur,m.amt)});return t}
     function tbl(head,list,rowf,foot){
       var body=list.map(function(m,i){return '<tr><td>'+(i+1)+'</td>'+rowf(m)+'</tr>'}).join('');
-      return xTbl(head,body,foot?'<tr style="font-weight:bold;background:#eef3f7"><td colspan="'+(head.length-1)+'">'+foot[0]+'</td><td>'+foot[1]+'</td></tr>':'');
+      return xTbl(head,body,foot?'<tr style="font-weight:bold;background:#eef3f7"><td colspan="'+(foot[2]||head.length-1)+'">'+foot[0]+'</td><td colspan="'+(head.length-(foot[2]||head.length-1))+'">'+foot[1]+'</td></tr>':'');
     }
     var P=[],sales=pick(['sale']),purch=pick(['purch']),rets=pick(['saleRet','supRet']),exps=pick(['exp']),emp=pick(['salary','adv','bonus']);
     function add(id,nav,title,list,html){if(list.length||showEmpty)P.push({id:id,nav:nav,title:title,html:list.length?html:'<div class="muted">لا توجد حركات</div>',n:list.length})}
-    add('sr-s-sales','المبيعات','🛒 المبيعات (حركة البيع)',sales,tbl(['#',tm(),'رقم الفاتورة','الزبون','البيان','الكمية','المبلغ','الدفع'],sales,function(m){
-      return '<td>'+esc(when(m))+'</td><td>'+esc(m.ref)+'</td><td>'+esc(m.party)+'</td><td style="text-align:right">'+esc(m.desc)+'</td><td>'+n2(m.qty)+'</td><td><b>'+moneyC(m.amt,m.cur)+'</b></td><td>'+esc(m.pay)+'</td>'},['الإجمالي',fmtMap(sumOf(sales))]));
-    add('sr-s-purch','المشتريات','📦 المشتريات (حركة الشراء)',purch,tbl(['#',tm(),'رقم الفاتورة','المورد','البيان','الكمية','المبلغ','الدفع'],purch,function(m){
-      return '<td>'+esc(when(m))+'</td><td>'+esc(m.ref)+'</td><td>'+esc(m.party)+'</td><td style="text-align:right">'+esc(m.desc)+'</td><td>'+n2(m.qty)+'</td><td><b>'+moneyC(m.amt,m.cur)+'</b></td><td>'+esc(m.pay)+'</td>'},['الإجمالي',fmtMap(sumOf(purch))]));
+    add('sr-s-sales','المبيعات','🛒 المبيعات (حركة البيع)',sales,tbl(sth(['#',tm(),'رقم الفاتورة','الزبون','البيان','الكمية','المبلغ','الدفع']),sales,function(m){
+      return '<td>'+esc(when(m))+'</td><td>'+esc(m.ref)+'</td><td>'+esc(m.party)+'</td><td style="text-align:right">'+esc(m.desc)+'</td><td>'+n2(m.qty)+'</td><td><b>'+moneyC(m.amt,m.cur)+'</b></td><td>'+esc(m.pay)+'</td>'+stc(m)},['الإجمالي',fmtMap(sumOf(sales)),6]));
+    add('sr-s-purch','المشتريات','📦 المشتريات (حركة الشراء)',purch,tbl(sth(['#',tm(),'رقم الفاتورة','المورد','البيان','الكمية','المبلغ','الدفع']),purch,function(m){
+      return '<td>'+esc(when(m))+'</td><td>'+esc(m.ref)+'</td><td>'+esc(m.party)+'</td><td style="text-align:right">'+esc(m.desc)+'</td><td>'+n2(m.qty)+'</td><td><b>'+moneyC(m.amt,m.cur)+'</b></td><td>'+esc(m.pay)+'</td>'+stc(m)},['الإجمالي',fmtMap(sumOf(purch)),6]));
     add('sr-s-rets','المرتجعات','↩️ المرتجعات',rets,tbl(['#',tm(),'النوع','المرجع','الجهة','البيان','الكمية','المبلغ'],rets,function(m){
       return '<td>'+esc(when(m))+'</td><td><b>'+TY[m.t].l+'</b></td><td>'+esc(m.ref)+'</td><td>'+esc(m.party)+'</td><td style="text-align:right">'+esc(m.desc)+'</td><td>'+(m.qty===''?'':n2(m.qty))+'</td><td><b>'+moneyC(m.amt,m.cur)+'</b></td>'},['الإجمالي',fmtMap(sumOf(rets))]));
     add('sr-s-exp','المصروفات','💸 المصروفات',exps,tbl(['#',tm(),'البيان','المبلغ'],exps,function(m){
@@ -9862,12 +9865,12 @@ window.addEventListener('load',function(){
     fillStoreSel(names.concat(subs.filter(function(n){return names.indexOf(n)<0})));
     var sv=($('srStore')&&$('srStore').value)||'';
     if(sv)rows=rows.filter(function(m){return sv===mainN?(!m.store||m.store===mainN):m.store===sv});
-    var S=repParts(rows,true).map(function(p){p.def=true;return p});
+    var S=repParts(rows,true,!sv).map(function(p){p.def=true;return p});
     if(sv)subs=[];
     if(!subs.length&&!sv)S.push({id:'sr-s-stores',nav:'المتاجر',title:'🏬 تقارير اليومية المتاجر الفرعية الأخرى',def:true,html:'<div class="muted">لا توجد متاجر فرعية. أضفها من الإضافات ➜ المتاجر.</div>'});
     subs.forEach(function(n,i){
       var sr=rows.filter(function(m){return m.store===n}),sh='';
-      repParts(sr,true).forEach(function(p){sh+='<div style="margin:10px 0 2px"><b>'+p.title+'</b></div>'+p.html});
+      repParts(sr,true,false).forEach(function(p){sh+='<div style="margin:10px 0 2px"><b>'+p.title+'</b></div>'+p.html});
       S.push({id:'sr-s-store'+(i+1),nav:'🏬 '+esc(n),title:'🏬 '+esc(n)+' — '+(mode==='day'?'تقرير يومي':'تقرير شهري'),def:true,html:sh});
     });
 
