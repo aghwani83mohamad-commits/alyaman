@@ -3347,6 +3347,7 @@ function bcPick(m){
   <section class="statement-account-section">
     <h2 id="lblCustStmt">كشف حساب الزبون</h2>
     <select id="stCustomer" onchange="renderCustomerStatement()"></select>
+    <div class="ym-stmt-store-wrap" style="margin-top:8px"><label>🏬 المتجر</label><select id="stCustStore" onchange="renderCustomerStatement()"></select></div>
     <div class="row" style="margin-top:8px">
       <div><label id="lblCustStmtFrom">من تاريخ</label><input id="custStmtFrom" type="date" onchange="renderCustomerStatement()"></div>
       <div><label id="lblCustStmtTo">إلى تاريخ</label><input id="custStmtTo" type="date" onchange="renderCustomerStatement()"></div>
@@ -3367,6 +3368,7 @@ function bcPick(m){
   <section class="statement-account-section">
     <h2 id="lblSuppStmt">كشف حساب المورد</h2>
     <select id="stSupplier" onchange="renderSupplierStatement()"></select>
+    <div class="ym-stmt-store-wrap" style="margin-top:8px"><label>🏬 المتجر</label><select id="stSuppStore" onchange="renderSupplierStatement()"></select></div>
     <div class="row" style="margin-top:8px">
       <div><label id="lblSuppStmtFrom">من تاريخ</label><input id="suppStmtFrom" type="date" onchange="renderSupplierStatement()"></div>
       <div><label id="lblSuppStmtTo">إلى تاريخ</label><input id="suppStmtTo" type="date" onchange="renderSupplierStatement()"></div>
@@ -3555,6 +3557,7 @@ function bcPick(m){
       <div><label>اسم الزبون أو رقم السند</label><input id="rcQ" placeholder="ابحث بالاسم أو رقم السند" oninput="rcRender()"></div>
       <div><label>من تاريخ</label><input id="rcFrom" type="date" onchange="rcRender()"></div>
       <div><label>إلى تاريخ</label><input id="rcTo" type="date" onchange="rcRender()"></div>
+      <div class="ym-stmt-store-wrap"><label>🏬 المتجر</label><select id="rcStore" onchange="rcRender()"></select></div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 10px">
       <button class="primary" type="button" onclick="rcRender()">بحث</button>
@@ -3586,6 +3589,7 @@ function bcPick(m){
       <div><label>اسم المورد أو رقم السند</label><input id="pvQ" placeholder="ابحث بالاسم أو رقم السند" oninput="pvRender()"></div>
       <div><label>من تاريخ</label><input id="pvFrom" type="date" onchange="pvRender()"></div>
       <div><label>إلى تاريخ</label><input id="pvTo" type="date" onchange="pvRender()"></div>
+      <div class="ym-stmt-store-wrap"><label>🏬 المتجر</label><select id="pvStore" onchange="pvRender()"></select></div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 10px">
       <button class="primary" type="button" onclick="pvRender()">بحث</button>
@@ -4539,6 +4543,10 @@ function ymItemStore(it){ const l=ymStoreList(); return (it&&it.store&&l.include
 function ymItemsInStore(n){ return (db.items||[]).filter(x=>ymItemStore(x)===n); }
 function ymItemFormStore(){ const e=document.getElementById('iStore'); const l=ymStoreList(); return (e&&l.includes(e.value))?e.value:l[0]; }
 function ymItemsForFilter(){ const f=document.getElementById('itemsStoreFilter'); const v=f?f.value:''; return (v&&v!=='__all')?ymItemsInStore(v):(db.items||[]); }
+function ymStmtStore(rec){ const l=ymStoreList(); return (rec&&rec.store)||l[0]; }
+function ymStmtMulti(){ return ymStoreList().length>1; }
+function ymStmtSel(id){ const e=document.getElementById(id); const v=e?e.value:''; return (v&&v!=='__all'&&ymStoreList().includes(v))?v:''; }
+function ymStmtFilter(rows,id){ const v=ymStmtSel(id); return v?rows.filter(r=>ymStmtStore(r)===v):rows; }
 function ymInvStoreValue(){ const f=document.getElementById('invStoreFilter'); const v=f?f.value:''; return (v&&v!=='__all'&&ymStoreList().includes(v))?v:''; }
 function ymInvItems(){ const v=ymInvStoreValue(); return v?ymItemsInStore(v):(db.items||[]); }
 function ymInvStoreChanged(){ try{ render(); }catch(e){ renderProductDetail(); } try{ const r=document.getElementById('monthlyInvReport'); if(r&&r.innerHTML.trim()) showMonthlyInventoryReport(); }catch(e){} }
@@ -4547,6 +4555,8 @@ function ymFillItemStoreUI(){
   const iv=document.getElementById('invStoreFilter');
   if(iv&&iv.dataset.sig!==sig){ const old=iv.value; iv.innerHTML='<option value="__all">كل المتاجر</option>'+list.map(n=>`<option value="${ymEsc(n)}">${ymEsc(n)}</option>`).join(''); iv.dataset.sig=sig; iv.value=(old==='__all'||list.includes(old))?old:'__all'; }
   { const w=document.getElementById('invStoreWrap'); if(w) w.style.display=list.length>1?'':'none'; }
+  ['stCustStore','stSuppStore','rcStore','pvStore'].forEach(id=>{ const el=document.getElementById(id); if(el&&el.dataset.sig!==sig){ const old=el.value; el.innerHTML='<option value="__all">كل المتاجر</option>'+list.map(n=>`<option value="${ymEsc(n)}">${ymEsc(n)}</option>`).join(''); el.dataset.sig=sig; el.value=(old==='__all'||list.includes(old))?old:'__all'; } });
+  document.querySelectorAll('.ym-stmt-store-wrap').forEach(w=>{ w.style.display=list.length>1?'':'none'; });
   const f=document.getElementById('itemsStoreFilter');
   if(f&&f.dataset.sig!==sig){ const old=f.value; f.innerHTML='<option value="__all">كل المتاجر</option>'+list.map(n=>`<option value="${ymEsc(n)}">${ymEsc(n)}</option>`).join(''); f.dataset.sig=sig; f.value=(old==='__all'||list.includes(old))?old:'__all'; }
   const e=document.getElementById('iStore');
@@ -6394,7 +6404,7 @@ function rowsCustomer(cid) {
   const salesRows = db.sales
     .filter(x => sameId(x.customerId) && !x.cancelled)
     .map(x => ({
-      date: x.date || x.createdAt || now(),
+      store: ymStmtStore(x), date: x.date || x.createdAt || now(),
       type: isCreditSale(x) ? 'بيع آجل' : 'بيع نقدي',
       ref: x.invoiceNo || x.invoiceId || '',
       amount: +x.total || 0,
@@ -6404,13 +6414,13 @@ function rowsCustomer(cid) {
     }));
   const paymentRows = db.customerPayments
     .filter(x => sameId(x.customerId))
-    .map(x => ({ date:x.date || x.createdAt || now(), type:'دفعة من الزبون', ref:'', amount:+x.amount||0, currency:txCurrency(x), debit:0, credit:+x.amount||0 }));
+    .map(x => ({ store: ymStmtStore(x), date:x.date || x.createdAt || now(), type:'دفعة من الزبون', ref:'', amount:+x.amount||0, currency:txCurrency(x), debit:0, credit:+x.amount||0 }));
   const returnRows = (db.returns||[])
     .filter(x => sameId(x.customerId))
     .map(x => {
       const onCredit = debtReturnIds.has(String(x.id));
       return {
-        date:x.date || x.createdAt || now(),
+        store: ymStmtStore(x), date:x.date || x.createdAt || now(),
         type: onCredit ? 'مرتجع بضاعة (يخفّض الدين)' : 'مرتجع بضاعة — مبلغ نقدي (لا يؤثر على الدين)',
         ref:'مرتجع-' + String(x.id ?? ''), amount:+x.total||0, currency:'SYP',
         debit:0, credit: onCredit ? (+x.total||0) : 0
@@ -6425,7 +6435,7 @@ function rowsSupplier(vid) {
   const purchaseRows = db.purchases
     .filter(x => sameId(x.supplierId))
     .map(x => ({
-      date:x.date || x.createdAt || now(),
+      store: ymStmtStore(x), date:x.date || x.createdAt || now(),
       type:x.pay === 'آجل' ? 'شراء آجل' : 'شراء نقدي',
       ref: x.invoiceNo || x.id || '',
       amount:+x.total||0,
@@ -6435,11 +6445,11 @@ function rowsSupplier(vid) {
     }));
   const paymentRows = db.supplierPayments
     .filter(x => sameId(x.supplierId))
-    .map(x => ({ date:x.date || x.createdAt || now(), type:'دفعة للمورد', ref:'', amount:+x.amount||0, currency:txCurrency(x), debit:0, credit:+x.amount||0 }));
+    .map(x => ({ store: ymStmtStore(x), date:x.date || x.createdAt || now(), type:'دفعة للمورد', ref:'', amount:+x.amount||0, currency:txCurrency(x), debit:0, credit:+x.amount||0 }));
   const returnRows = (db.supplierReturns||[])
     .filter(x => sameId(x.supplierId))
     .map(x => ({
-      date:x.date || x.createdAt || now(),
+      store: ymStmtStore(x), date:x.date || x.createdAt || now(),
       type:'ترجيع إلى المورد',
       ref:x.id || '',
       amount:+x.total||0,
@@ -6449,19 +6459,19 @@ function rowsSupplier(vid) {
     }));
   const refundRows = (db.supplierReturns||[])
     .filter(x => sameId(x.supplierId) && supplierReturnRefund(x) > 0)
-    .map(x => ({ date:x.date || x.createdAt || now(), type:'استرداد نقدي من المورد', ref:'مرتجع-' + String(x.id ?? ''), amount:supplierReturnRefund(x), currency:txCurrency(x), debit:supplierReturnRefund(x), credit:0 }));
+    .map(x => ({ store: ymStmtStore(x), date:x.date || x.createdAt || now(), type:'استرداد نقدي من المورد', ref:'مرتجع-' + String(x.id ?? ''), amount:supplierReturnRefund(x), currency:txCurrency(x), debit:supplierReturnRefund(x), credit:0 }));
   return [...purchaseRows, ...paymentRows, ...returnRows, ...refundRows]
     .sort((a,b) => new Date(a.date) - new Date(b.date));
 }
 
-function statementHtml(rows, openingBalance = 0) {
+function statementHtml(rows, openingBalance = 0, showStore = false) {
   if (!rows.length && !openingBalance) return `<div class="muted">${t('msgNoTrans')}</div>`;
   let bal = +openingBalance || 0;
   let html = `<div class="muted" style="margin:8px 0">الرصيد الافتتاحي: <strong>${money(bal)} ل.س</strong></div>`;
-  html += `<table><tr><th>${t('thDate')}</th><th>${t('thStatement')}</th><th>المرجع</th><th>العملة</th><th>قيمة الحركة</th><th>${t('thDebit')}</th><th>${t('thCredit')}</th><th>${t('thBalance')}</th></tr>`;
+  html += `<table><tr><th>${t('thDate')}</th><th>${t('thStatement')}</th><th>المرجع</th>${showStore?'<th>المتجر</th>':''}<th>العملة</th><th>قيمة الحركة</th><th>${t('thDebit')}</th><th>${t('thCredit')}</th><th>${t('thBalance')}</th></tr>`;
   for (const x of rows) {
     bal += (+x.debit||0) - (+x.credit||0);
-    html += `<tr><td>${new Date(x.date).toLocaleDateString(currentLang)}</td><td>${esc(x.type||'')}</td><td>${esc(String(x.ref||''))}</td><td>ل.س</td><td>${money(x.amount||0)} ل.س</td><td>${money(x.debit||0)} ل.س</td><td>${money(x.credit||0)} ل.س</td><td>${money(bal)} ل.س</td></tr>`;
+    html += `<tr><td>${new Date(x.date).toLocaleDateString(currentLang)}</td><td>${esc(x.type||'')}</td><td>${esc(String(x.ref||''))}</td>${showStore?`<td>${esc(x.store||'')}</td>`:''}<td>ل.س</td><td>${money(x.amount||0)} ل.س</td><td>${money(x.debit||0)} ل.س</td><td>${money(x.credit||0)} ل.س</td><td>${money(bal)} ل.س</td></tr>`;
   }
   return html + `</table>` + (bal < 0
     ? `<p class="total" style="color:#0a7a3d">رصيد دائن (المدفوع يزيد عن المستحق بمقدار ${money(-bal)} ل.س) — لا يوجد دين، والمبلغ له عندنا</p>`
@@ -6484,23 +6494,23 @@ function filterStatementRows(rows, fromEl, toEl) {
 function renderCustomerStatement() {
   const cid = +stCustomer.value;
   if (!cid) { customerStatement.innerHTML = `<div class="muted">${t('optSelectCust')}</div>`; return; }
-  const allRows = rowsCustomer(cid);
+  const allRows = ymStmtFilter(rowsCustomer(cid), 'stCustStore');
   const rows = filterStatementRows(allRows, custStmtFrom, custStmtTo);
-  customerStatement.innerHTML = rows ? statementHtml(rows, statementOpeningBalance(allRows, custStmtFrom)) : '';
+  customerStatement.innerHTML = rows ? statementHtml(rows, statementOpeningBalance(allRows, custStmtFrom), ymStmtMulti() && !ymStmtSel('stCustStore')) : '';
 }
 
 function renderSupplierStatement() {
   const vid = +stSupplier.value;
   if (!vid) { supplierStatement.innerHTML = `<div class="muted">${t('optSelectSupp')}</div>`; return; }
-  const allRows = rowsSupplier(vid);
+  const allRows = ymStmtFilter(rowsSupplier(vid), 'stSuppStore');
   const rows = filterStatementRows(allRows, suppStmtFrom, suppStmtTo);
-  supplierStatement.innerHTML = rows ? statementHtml(rows, statementOpeningBalance(allRows, suppStmtFrom)) : '';
+  supplierStatement.innerHTML = rows ? statementHtml(rows, statementOpeningBalance(allRows, suppStmtFrom), ymStmtMulti() && !ymStmtSel('stSuppStore')) : '';
 }
 
 function searchCustomerStatement() { renderCustomerStatement(); }
 function searchSupplierStatement() { renderSupplierStatement(); }
-function clearCustomerStatementFilter() { custStmtFrom.value=''; custStmtTo.value=''; renderCustomerStatement(); }
-function clearSupplierStatementFilter() { suppStmtFrom.value=''; suppStmtTo.value=''; renderSupplierStatement(); }
+function clearCustomerStatementFilter() { custStmtFrom.value=''; custStmtTo.value=''; if(document.getElementById('stCustStore')) stCustStore.value='__all'; renderCustomerStatement(); }
+function clearSupplierStatementFilter() { suppStmtFrom.value=''; suppStmtTo.value=''; if(document.getElementById('stSuppStore')) stSuppStore.value='__all'; renderSupplierStatement(); }
 
 function del(type, id) {
   if (!confirm(t('alertConfirmDel'))) return;
@@ -6653,14 +6663,14 @@ function printCustomerStatement() {
   let cid = +stCustomer.value;
   if (!cid) return alert(t('alertSelectCustFirst'));
   let c = db.customers.find(x => x.id === cid);
-  const allRows = rowsCustomer(cid); const rows = filterStatementRows(allRows, custStmtFrom, custStmtTo); if (!rows) return; doPrint(t('lblCustStmt'), `<h1>${t('appTitle')}</h1><h2>${t('lblCustStmt')}</h2><p>${t('lblCustomer')}: ${esc(c ? c.name : '')}</p>${statementHtml(rows, statementOpeningBalance(allRows, custStmtFrom))}`);
+  const allRows = ymStmtFilter(rowsCustomer(cid), 'stCustStore'); const rows = filterStatementRows(allRows, custStmtFrom, custStmtTo); if (!rows) return; doPrint(t('lblCustStmt'), `<h1>${t('appTitle')}</h1><h2>${t('lblCustStmt')}</h2><p>${t('lblCustomer')}: ${esc(c ? c.name : '')}</p>${ymStmtSel('stCustStore')?`<p>🏬 المتجر: ${esc(ymStmtSel('stCustStore'))}</p>`:''}${statementHtml(rows, statementOpeningBalance(allRows, custStmtFrom), ymStmtMulti() && !ymStmtSel('stCustStore'))}`);
 }
 
 function printSupplierStatement() {
   let vid = +stSupplier.value;
   if (!vid) return alert(t('alertSelectSuppFirst'));
   let v = db.suppliers.find(x => x.id === vid);
-  const allRows = rowsSupplier(vid); const rows = filterStatementRows(allRows, suppStmtFrom, suppStmtTo); if (!rows) return; doPrint(t('lblSuppStmt'), `<h1>${t('appTitle')}</h1><h2>${t('lblSuppStmt')}</h2><p>${t('lblSupplier')}: ${esc(v ? v.name : '')}</p>${statementHtml(rows, statementOpeningBalance(allRows, suppStmtFrom))}`);
+  const allRows = ymStmtFilter(rowsSupplier(vid), 'stSuppStore'); const rows = filterStatementRows(allRows, suppStmtFrom, suppStmtTo); if (!rows) return; doPrint(t('lblSuppStmt'), `<h1>${t('appTitle')}</h1><h2>${t('lblSuppStmt')}</h2><p>${t('lblSupplier')}: ${esc(v ? v.name : '')}</p>${ymStmtSel('stSuppStore')?`<p>🏬 المتجر: ${esc(ymStmtSel('stSuppStore'))}</p>`:''}${statementHtml(rows, statementOpeningBalance(allRows, suppStmtFrom), ymStmtMulti() && !ymStmtSel('stSuppStore'))}`);
 }
 
 function printAnnual() {
@@ -9119,6 +9129,7 @@ window.addEventListener('load',function(){
     var to=$('rcTo').value?new Date($('rcTo').value+'T23:59:59.999'):null;
     if(from&&to&&from>to){alert('من التاريخ يجب أن يكون قبل إلى التاريخ');return null;}
     return (db.customerPayments||[]).filter(function(x){
+      if(ymStmtSel('rcStore')&&ymStmtStore(x)!==ymStmtSel('rcStore')) return false;
       if(q&&String(x.receiptNo)!==q&&pname(x).toLowerCase().indexOf(q)===-1&&String(x.receiptNo).indexOf(q)===-1&&String(x.note||'').toLowerCase().indexOf(q)===-1) return false;
       var d=new Date(x.date); if(from&&d<from) return false; if(to&&d>to) return false;
       return true;
@@ -9129,7 +9140,7 @@ window.addEventListener('load',function(){
     return Object.keys(t).map(function(c){return moneyC(t[c],c)}).join(' + ');
   }
 
-  window.rcClear=function(){$('rcQ').value='';$('rcFrom').value='';$('rcTo').value='';rcRender();};
+  window.rcClear=function(){$('rcQ').value='';$('rcFrom').value='';$('rcTo').value='';if($('rcStore'))$('rcStore').value='__all';rcRender();};
 
   window.rcRender=function(){
     if(!$('rcList')) return;
@@ -9137,9 +9148,9 @@ window.addEventListener('load',function(){
     var list=filtered(); if(!list) return;
     $('rcSummary').textContent=list.length?('الإجمالي: '+totalsText(list)):'';
     if(!list.length){$('rcList').innerHTML='<div class="muted">لا توجد سندات قبض مطابقة.</div>';return;}
-    $('rcList').innerHTML='<table><tr><th>رقم السند</th><th>التاريخ</th><th>الزبون</th><th>المبلغ</th><th>وذلك عن</th><th>إجراء</th></tr>'+
+    $('rcList').innerHTML='<table><tr><th>رقم السند</th><th>التاريخ</th><th>الزبون</th>'+(ymStmtMulti()?'<th>المتجر</th>':'')+'<th>المبلغ</th><th>وذلك عن</th><th>إجراء</th></tr>'+
       list.map(function(x){
-        return '<tr><td>'+E(x.receiptNo)+'</td><td>'+dstr(x.date)+'</td><td>'+E(pname(x))+'</td><td>'+mc(x.amount,x)+'</td><td>'+E(x.note||'')+'</td>'+
+        return '<tr><td>'+E(x.receiptNo)+'</td><td>'+dstr(x.date)+'</td><td>'+E(pname(x))+'</td>'+(ymStmtMulti()?'<td>'+E(ymStmtStore(x))+'</td>':'')+'<td>'+mc(x.amount,x)+'</td><td>'+E(x.note||'')+'</td>'+
           '<td style="white-space:nowrap"><button class="secondary" type="button" onclick="rcPrint(\''+E(x.id)+'\')">🖨️ طباعة</button> <button class="danger" type="button" onclick="rcDel(\''+E(x.id)+'\')">حذف</button></td></tr>';
       }).join('')+'</table>';
   };
@@ -9155,7 +9166,7 @@ window.addEventListener('load',function(){
     doPrint(title,CSS+'<h1>'+E(co)+'</h1><h2>سند قبض</h2>'+
       '<div class="head"><span>التاريخ: '+new Date(x.date).toLocaleDateString(currentLang)+'</span><span>رقم السند: <b>'+E(x.receiptNo)+'</b></span></div>'+
       '<div class="rc-box">'+
-      '<div>قبضنا من السيد: <b>'+E(pname(x))+'</b></div>'+
+      (ymStmtMulti()?'<div>المتجر: <b>'+E(ymStmtStore(x))+'</b></div>':'')+'<div>قبضنا من السيد: <b>'+E(pname(x))+'</b></div>'+
       '<div>دفعة وقدرها: <span class="rc-amt">'+mc(x.amount,x)+'</span></div>'+
       '<div class="rc-words">'+E(amountWords(+x.amount||0,x))+'</div>'+
       (x.note?'<div>وذلك عن: '+E(x.note)+'</div>':'')+
@@ -9167,8 +9178,8 @@ window.addEventListener('load',function(){
     var list=filtered(); if(!list) return;
     if(!list.length) return alert('لا توجد سندات للطباعة.');
     var co=(db.settings&&db.settings.companyName)||'اليمان للتجارة';
-    doPrint('قائمة سندات القبض','<h1>'+E(co)+'</h1><h2>قائمة سندات القبض</h2><table><tr><th>رقم السند</th><th>التاريخ</th><th>الزبون</th><th>المبلغ</th><th>وذلك عن</th></tr>'+
-      list.map(function(x){return '<tr><td>'+E(x.receiptNo)+'</td><td>'+dstr(x.date)+'</td><td>'+E(pname(x))+'</td><td>'+mc(x.amount,x)+'</td><td>'+E(x.note||'')+'</td></tr>'}).join('')+
+    doPrint('قائمة سندات القبض','<h1>'+E(co)+'</h1><h2>قائمة سندات القبض</h2><table><tr><th>رقم السند</th><th>التاريخ</th><th>الزبون</th>'+(ymStmtMulti()?'<th>المتجر</th>':'')+'<th>المبلغ</th><th>وذلك عن</th></tr>'+
+      list.map(function(x){return '<tr><td>'+E(x.receiptNo)+'</td><td>'+dstr(x.date)+'</td><td>'+E(pname(x))+'</td>'+(ymStmtMulti()?'<td>'+E(ymStmtStore(x))+'</td>':'')+'<td>'+mc(x.amount,x)+'</td><td>'+E(x.note||'')+'</td></tr>'}).join('')+
       '</table><p class="total">عدد السندات: '+list.length+' — الإجمالي: '+E(totalsText(list))+'</p>');
   };
 
@@ -9273,6 +9284,7 @@ window.addEventListener('load',function(){
     var to=$('pvTo').value?new Date($('pvTo').value+'T23:59:59.999'):null;
     if(from&&to&&from>to){alert('من التاريخ يجب أن يكون قبل إلى التاريخ');return null;}
     return (db.supplierPayments||[]).filter(function(x){
+      if(ymStmtSel('pvStore')&&ymStmtStore(x)!==ymStmtSel('pvStore')) return false;
       if(q&&String(x.receiptNo)!==q&&pname(x).toLowerCase().indexOf(q)===-1&&String(x.receiptNo).indexOf(q)===-1&&String(x.note||'').toLowerCase().indexOf(q)===-1) return false;
       var d=new Date(x.date); if(from&&d<from) return false; if(to&&d>to) return false;
       return true;
@@ -9283,7 +9295,7 @@ window.addEventListener('load',function(){
     return Object.keys(t).map(function(c){return moneyC(t[c],c)}).join(' + ');
   }
 
-  window.pvClear=function(){$('pvQ').value='';$('pvFrom').value='';$('pvTo').value='';pvRender();};
+  window.pvClear=function(){$('pvQ').value='';$('pvFrom').value='';$('pvTo').value='';if($('pvStore'))$('pvStore').value='__all';pvRender();};
 
   window.pvRender=function(){
     if(!$('pvList')) return;
@@ -9291,9 +9303,9 @@ window.addEventListener('load',function(){
     var list=filtered(); if(!list) return;
     $('pvSummary').textContent=list.length?('الإجمالي: '+totalsText(list)):'';
     if(!list.length){$('pvList').innerHTML='<div class="muted">لا توجد سندات قبض مطابقة.</div>';return;}
-    $('pvList').innerHTML='<table><tr><th>رقم السند</th><th>التاريخ</th><th>المورد</th><th>المبلغ</th><th>وذلك عن</th><th>إجراء</th></tr>'+
+    $('pvList').innerHTML='<table><tr><th>رقم السند</th><th>التاريخ</th><th>المورد</th>'+(ymStmtMulti()?'<th>المتجر</th>':'')+'<th>المبلغ</th><th>وذلك عن</th><th>إجراء</th></tr>'+
       list.map(function(x){
-        return '<tr><td>'+E(x.receiptNo)+'</td><td>'+dstr(x.date)+'</td><td>'+E(pname(x))+'</td><td>'+mc(x.amount,x)+'</td><td>'+E(x.note||'')+'</td>'+
+        return '<tr><td>'+E(x.receiptNo)+'</td><td>'+dstr(x.date)+'</td><td>'+E(pname(x))+'</td>'+(ymStmtMulti()?'<td>'+E(ymStmtStore(x))+'</td>':'')+'<td>'+mc(x.amount,x)+'</td><td>'+E(x.note||'')+'</td>'+
           '<td style="white-space:nowrap"><button class="secondary" type="button" onclick="pvPrint(\''+E(x.id)+'\')">🖨️ طباعة</button> <button class="danger" type="button" onclick="pvDel(\''+E(x.id)+'\')">حذف</button></td></tr>';
       }).join('')+'</table>';
   };
@@ -9309,7 +9321,7 @@ window.addEventListener('load',function(){
     doPrint(title,CSS+'<h1>'+E(co)+'</h1><h2>سند دفع</h2>'+
       '<div class="head"><span>التاريخ: '+new Date(x.date).toLocaleDateString(currentLang)+'</span><span>رقم السند: <b>'+E(x.receiptNo)+'</b></span></div>'+
       '<div class="pv-box">'+
-      '<div>دفعنا للسيد: <b>'+E(pname(x))+'</b></div>'+
+      (ymStmtMulti()?'<div>المتجر: <b>'+E(ymStmtStore(x))+'</b></div>':'')+'<div>دفعنا للسيد: <b>'+E(pname(x))+'</b></div>'+
       '<div>دفعة وقدرها: <span class="pv-amt">'+mc(x.amount,x)+'</span></div>'+
       '<div class="pv-words">'+E(amountWords(+x.amount||0,x))+'</div>'+
       (x.note?'<div>وذلك عن: '+E(x.note)+'</div>':'')+
@@ -9321,8 +9333,8 @@ window.addEventListener('load',function(){
     var list=filtered(); if(!list) return;
     if(!list.length) return alert('لا توجد سندات للطباعة.');
     var co=(db.settings&&db.settings.companyName)||'اليمان للتجارة';
-    doPrint('قائمة سندات الدفع','<h1>'+E(co)+'</h1><h2>قائمة سندات الدفع</h2><table><tr><th>رقم السند</th><th>التاريخ</th><th>المورد</th><th>المبلغ</th><th>وذلك عن</th></tr>'+
-      list.map(function(x){return '<tr><td>'+E(x.receiptNo)+'</td><td>'+dstr(x.date)+'</td><td>'+E(pname(x))+'</td><td>'+mc(x.amount,x)+'</td><td>'+E(x.note||'')+'</td></tr>'}).join('')+
+    doPrint('قائمة سندات الدفع','<h1>'+E(co)+'</h1><h2>قائمة سندات الدفع</h2><table><tr><th>رقم السند</th><th>التاريخ</th><th>المورد</th>'+(ymStmtMulti()?'<th>المتجر</th>':'')+'<th>المبلغ</th><th>وذلك عن</th></tr>'+
+      list.map(function(x){return '<tr><td>'+E(x.receiptNo)+'</td><td>'+dstr(x.date)+'</td><td>'+E(pname(x))+'</td>'+(ymStmtMulti()?'<td>'+E(ymStmtStore(x))+'</td>':'')+'<td>'+mc(x.amount,x)+'</td><td>'+E(x.note||'')+'</td></tr>'}).join('')+
       '</table><p class="total">عدد السندات: '+list.length+' — الإجمالي: '+E(totalsText(list))+'</p>');
   };
 
