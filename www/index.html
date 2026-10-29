@@ -4857,8 +4857,7 @@ function updateAddonsSubnav(){
     let bar=page.querySelector(':scope > .addons-subnav');
     if(!bar){
       bar=document.createElement('div'); bar.className='addons-subnav';
-      bar.innerHTML=tabs.map(([k,l])=>`<button type="button" data-tab="${k}" onclick="show('${k}')">${l}</button>`).join('')
-        +`<button type="button" class="calc-tab" onclick="openAlyamanCalculator()">🧮 الآلة الحاسبة</button>`;
+      bar.innerHTML=tabs.map(([k,l])=>`<button type="button" data-tab="${k}" onclick="show('${k}')">${l}</button>`).join('');
       page.insertBefore(bar,page.firstChild);
     }
     bar.querySelectorAll('button[data-tab]').forEach(x=>x.classList.toggle('active',x.dataset.tab===pid));
