@@ -2963,7 +2963,7 @@ function bcPick(m){
 <div id="productInventory" class="page">
   <section>
     <h2>📦 جرد المنتج والحركة التفصيلية</h2>
-    <div class="row"><div><label>اختر المنتج</label><select id="inventoryDetailItem" onchange="renderProductDetail()"></select></div><div style="display:flex;align-items:end;gap:8px"><button class="secondary" onclick="printProductDetail()">🖨️ طباعة حركة المنتج</button></div></div>
+    <div class="row"><div id="invStoreWrap"><label>🏬 المتجر</label><select id="invStoreFilter" onchange="ymInvStoreChanged()"></select></div><div><label>اختر المنتج</label><select id="inventoryDetailItem" onchange="renderProductDetail()"></select></div><div style="display:flex;align-items:end;gap:8px"><button class="secondary" onclick="printProductDetail()">🖨️ طباعة حركة المنتج</button></div></div>
     <div class="row" style="margin-top:10px"><div><label>شهر التقرير</label><input type="month" id="monthlyInvMonth"></div><div style="display:flex;align-items:end;gap:8px;flex-wrap:wrap"><button class="primary" onclick="showMonthlyInventoryReport()">📅 تقرير الجرد الشهري</button><button class="secondary" onclick="printMonthlyInventoryReport()">🖨️ طباعة التقرير</button></div></div>
     <div id="monthlyInvReport"></div>
     <div id="productDetail"></div>
@@ -4539,8 +4539,14 @@ function ymItemStore(it){ const l=ymStoreList(); return (it&&it.store&&l.include
 function ymItemsInStore(n){ return (db.items||[]).filter(x=>ymItemStore(x)===n); }
 function ymItemFormStore(){ const e=document.getElementById('iStore'); const l=ymStoreList(); return (e&&l.includes(e.value))?e.value:l[0]; }
 function ymItemsForFilter(){ const f=document.getElementById('itemsStoreFilter'); const v=f?f.value:''; return (v&&v!=='__all')?ymItemsInStore(v):(db.items||[]); }
+function ymInvStoreValue(){ const f=document.getElementById('invStoreFilter'); const v=f?f.value:''; return (v&&v!=='__all'&&ymStoreList().includes(v))?v:''; }
+function ymInvItems(){ const v=ymInvStoreValue(); return v?ymItemsInStore(v):(db.items||[]); }
+function ymInvStoreChanged(){ try{ render(); }catch(e){ renderProductDetail(); } try{ const r=document.getElementById('monthlyInvReport'); if(r&&r.innerHTML.trim()) showMonthlyInventoryReport(); }catch(e){} }
 function ymFillItemStoreUI(){
   const list=ymStoreList(), sig=list.join('\u0001');
+  const iv=document.getElementById('invStoreFilter');
+  if(iv&&iv.dataset.sig!==sig){ const old=iv.value; iv.innerHTML='<option value="__all">كل المتاجر</option>'+list.map(n=>`<option value="${ymEsc(n)}">${ymEsc(n)}</option>`).join(''); iv.dataset.sig=sig; iv.value=(old==='__all'||list.includes(old))?old:'__all'; }
+  { const w=document.getElementById('invStoreWrap'); if(w) w.style.display=list.length>1?'':'none'; }
   const f=document.getElementById('itemsStoreFilter');
   if(f&&f.dataset.sig!==sig){ const old=f.value; f.innerHTML='<option value="__all">كل المتاجر</option>'+list.map(n=>`<option value="${ymEsc(n)}">${ymEsc(n)}</option>`).join(''); f.dataset.sig=sig; f.value=(old==='__all'||list.includes(old))?old:'__all'; }
   const e=document.getElementById('iStore');
@@ -6741,7 +6747,7 @@ function renderProductDetail() {
     ...stks.map(x=>({...x,type:'جرد فعلي',inQty:Math.max(0,+x.variance||0),outQty:Math.max(0,-(+x.variance||0)),total:0}))].sort((a,b)=>new Date(a.date)-new Date(b.date));
   let balance=opening;
   let rows=movements.map(x=>{balance+=x.inQty-x.outQty; return `<tr><td>${new Date(x.date).toLocaleString(currentLang)}</td><td>${x.type}</td><td>${x.inQty||'-'}</td><td>${x.outQty||'-'}</td><td>${balance}</td><td>${money(x.total||0)}</td></tr>`}).join('');
-  box.innerHTML=`<div class="cards" style="margin-top:12px"><div class="card"><span>الرصيد الحالي</span><b>${it.qty}</b></div><div class="card"><span>إجمالي المشتريات</span><b>${pQty}</b></div><div class="card"><span>إجمالي المبيعات</span><b>${sQty}</b></div><div class="card"><span>قيمة المخزون التقريبية</span><b>${money((+it.qty||0)*(+it.buy||0))}</b></div></div><div class="tgl-bar"><button type="button" id="movementBtn" class="tgl-btn" onclick="toggleMovementDetails()" aria-expanded="false" aria-controls="movementPanel"><span class="tgl-ico">📋</span><span>تفاصيل الحركة: ${esc(it.name)}</span><span class="tgl-arrow">▾</span></button></div><div id="movementPanel" class="tgl-panel" hidden><div class="tgl-scroll"><table id="productMovementTable"><tr><th>التاريخ</th><th>الحركة</th><th>وارد</th><th>صادر</th><th>الرصيد التراكمي</th><th>القيمة</th></tr><tr><td>-</td><td>رصيد افتتاحي</td><td>${opening}</td><td>-</td><td>${opening}</td><td>-</td></tr>${rows||'<tr><td colspan="6" class="muted">لا توجد حركات مسجلة لهذا المنتج</td></tr>'}</table></div></div>`;
+  box.innerHTML=`<div class="cards" style="margin-top:12px">${ymStoreList().length>1?`<div class="card"><span>🏬 المتجر</span><b style="font-size:18px!important">${esc(ymItemStore(it))}</b></div>`:''}<div class="card"><span>الرصيد الحالي</span><b>${it.qty}</b></div><div class="card"><span>إجمالي المشتريات</span><b>${pQty}</b></div><div class="card"><span>إجمالي المبيعات</span><b>${sQty}</b></div><div class="card"><span>قيمة المخزون التقريبية</span><b>${money((+it.qty||0)*(+it.buy||0))}</b></div></div><div class="tgl-bar"><button type="button" id="movementBtn" class="tgl-btn" onclick="toggleMovementDetails()" aria-expanded="false" aria-controls="movementPanel"><span class="tgl-ico">📋</span><span>تفاصيل الحركة: ${esc(it.name)}</span><span class="tgl-arrow">▾</span></button></div><div id="movementPanel" class="tgl-panel" hidden><div class="tgl-scroll"><table id="productMovementTable"><tr><th>التاريخ</th><th>الحركة</th><th>وارد</th><th>صادر</th><th>الرصيد التراكمي</th><th>القيمة</th></tr><tr><td>-</td><td>رصيد افتتاحي</td><td>${opening}</td><td>-</td><td>${opening}</td><td>-</td></tr>${rows||'<tr><td colspan="6" class="muted">لا توجد حركات مسجلة لهذا المنتج</td></tr>'}</table></div></div>`;
 }
 
 function buildMonthlyInventoryReport(ym){
@@ -6762,7 +6768,7 @@ function buildMonthlyInventoryReport(ym){
   [...(db.stockAdjustments||[]).map(x=>({date:x.date,itemId:x.itemId,d:+x.delta||0})),...(db.stocktakes||[]).map(x=>({date:x.date,itemId:x.itemId,d:+x.variance||0}))].forEach(x=>{const t=T(x.date),r=get(x.itemId); if(t<a){ if(x.d>=0) r.pBefore+=x.d; else r.sBefore+=-x.d; } else if(t<b){ if(x.d>=0) r.rIn+=x.d; else r.srOut+=-x.d; }});
   (db.supplierReturns||[]).forEach(x=>{const t=T(x.date),q=+x.qty||0,r=get(x.itemId); if(t<a) r.sBefore+=q; else if(t<b) r.srOut+=q;});
   let tIn=0,tOut=0,tVal=0,tOpen=0,tClose=0;
-  const rows=(db.items||[]).map((it,i)=>{
+  const rows=ymInvItems().map((it,i)=>{
     const r=get(it.id), base=+(it.initialQty ?? it.qty ?? 0);
     const open=base+r.pBefore-r.sBefore;
     const inQ=r.pIn+r.rIn, outQ=r.sOut+r.srOut;
@@ -6779,14 +6785,14 @@ function showMonthlyInventoryReport(){
   if(!inp||!box) return;
   if(!inp.value){ const d=new Date(); inp.value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
   const rep=buildMonthlyInventoryReport(inp.value);
-  box.innerHTML=`<h3 style="margin:14px 0 8px">📅 تقرير الجرد الشهري — ${rep.label}</h3>`+rep.html;
+  box.innerHTML=`<h3 style="margin:14px 0 8px">📅 تقرير الجرد الشهري — ${rep.label}${ymInvStoreValue()?' — 🏬 '+esc(ymInvStoreValue()):''}</h3>`+rep.html;
   return rep;
 }
 function printMonthlyInventoryReport(){
   const rep=showMonthlyInventoryReport(); if(!rep) return;
   printTableContent('تقرير الجرد الشهري — '+rep.label, rep.html);
 }
-function printProductDetail(){ const box=document.getElementById('productDetail'); const sel=document.getElementById('inventoryDetailItem'); if(!box||!sel||!sel.value) return alert('اختر المنتج أولاً'); const pc=box.cloneNode(true); pc.querySelectorAll('.tgl-bar').forEach(e=>e.remove()); pc.querySelectorAll('[hidden]').forEach(e=>e.removeAttribute('hidden')); printTableContent('جرد وحركة المنتج: '+sel.options[sel.selectedIndex].text, pc.innerHTML); }
+function printProductDetail(){ const box=document.getElementById('productDetail'); const sel=document.getElementById('inventoryDetailItem'); if(!box||!sel||!sel.value) return alert('اختر المنتج أولاً'); const pc=box.cloneNode(true); pc.querySelectorAll('.tgl-bar').forEach(e=>e.remove()); pc.querySelectorAll('[hidden]').forEach(e=>e.removeAttribute('hidden')); const __it=(db.items||[]).find(x=>String(x.id)===String(sel.value)); printTableContent('جرد وحركة المنتج: '+(__it?__it.name:sel.options[sel.selectedIndex].text)+(__it&&ymStoreList().length>1?' — المتجر: '+ymItemStore(__it):''), pc.innerHTML); }
 
 function render() {
   db.returns = db.returns || [];
@@ -6829,7 +6835,7 @@ function render() {
   const __ymCur = ymItemsInStore(window.__ymCurStore);
   sItem.innerHTML = __ymCur.map(x => `<option value="${x.id}">${esc(x.name)} — ${money(x.sell)} (${t('thStock')}: ${x.qty})</option>`).join('');
   if (__ymCur.some(x => String(x.id) === selectedSaleItem)) sItem.value = selectedSaleItem;
-  const detailSel=document.getElementById('inventoryDetailItem'); if(detailSel){ const old=detailSel.value; detailSel.innerHTML=`<option value="0">${currentLang==='en'?'Select product':(currentLang==='tr'?'Ürün seçin':'اختر المنتج')}</option>`+db.items.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join(''); detailSel.value=old||0; renderProductDetail(); }
+  const detailSel=document.getElementById('inventoryDetailItem'); if(detailSel){ const old=detailSel.value; const __invList=ymInvItems(); detailSel.innerHTML=`<option value="0">${currentLang==='en'?'Select product':(currentLang==='tr'?'Ürün seçin':'اختر المنتج')}</option>`+__invList.map(x=>`<option value="${x.id}">${esc(x.name)}${(!ymInvStoreValue()&&ymStoreList().length>1)?' ['+esc(ymItemStore(x))+']':''}</option>`).join(''); detailSel.value=__invList.some(x=>String(x.id)===String(old))?old:0; renderProductDetail(); }
   { const __pOld = pItem.value; pItem.innerHTML = __ymCur.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join(''); if (__ymCur.some(x => String(x.id) === __pOld)) pItem.value = __pOld; }
 
   sCustomer.innerHTML = `<option value="0">${t('optCashCust')}</option>` + db.customers.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
