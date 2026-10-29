@@ -2380,13 +2380,6 @@ html:not(.ym-tr) #appLock .ll-btn[data-l=ar],html.ym-tr #appLock .ll-btn[data-l=
       </label>
     </div>
 
-    <div class="cloud-grid" style="margin-top:6px">
-      <label>🏬 اسم المتجر لهذا الجهاز (يُسجَّل مع كل بيع وشراء وحركة جديدة)
-        <input id="cloudStoreName" type="text" placeholder="مثال: المتجر الثاني" autocomplete="off">
-      </label>
-      <button type="button" class="secondary" onclick="ymSaveStoreName()">💾 حفظ اسم المتجر</button>
-    </div>
-
     <div class="cloud-actions">
       <button type="button" class="primary" onclick="cloudConnect()">🔗 اتصال / تسجيل دخول</button>
       <button type="button" class="secondary" onclick="cloudSignUp()">👤 إنشاء حساب سحابي</button>
@@ -2968,6 +2961,7 @@ function bcPick(m){
       <option value="نقدي" id="optCash">نقدي</option>
       <option value="آجل" id="optCredit">آجل</option>
     </select>
+    <label>🏬 المتجر</label><select class="ym-store-sel" onchange="ymSetCurStore(this.value)"><option value="المتجر الأم">المتجر الأم</option><option value="المتجر الثاني">المتجر الثاني</option></select>
     <label id="lblSaleCurrency">العملة</label><select id="sCurrency" class="currency-select"></select>
     <div id="creditSaleExtra" style="display:none">
       <div class="row">
@@ -3097,6 +3091,7 @@ function bcPick(m){
       <div class="muted" id="purchaseRemainHint"></div>
     </div>
     <label id="lblPurchaseInvNo">رقم فاتورة المورد (اختياري)</label><input id="pInvNo" placeholder="رقم فاتورة المورد">
+    <label>🏬 المتجر</label><select class="ym-store-sel" onchange="ymSetCurStore(this.value)"><option value="المتجر الأم">المتجر الأم</option><option value="المتجر الثاني">المتجر الثاني</option></select>
     <label id="lblPurchaseCurrency">العملة</label><select id="pCurrency" class="currency-select"></select>
     <button class="secondary" onclick="addPurchaseLine()" id="btnAddPurchaseLine">➕ إضافة الصنف للفاتورة</button>
     <div id="purchaseCart"></div>
@@ -3965,7 +3960,6 @@ function openCloudSyncPanel(){
   document.getElementById('cloudProjectUrl').value=c.url||'';
   document.getElementById('cloudAnonKey').value=c.key||'';
   document.getElementById('cloudEmail').value=c.email||'';
-  { const sn=document.getElementById('cloudStoreName'); if(sn) sn.value=ymStoreName(); }
   p.classList.add('open'); p.setAttribute('aria-hidden','false');
   cloudSetStatus(cloudClient ? 'online' : 'offline', cloudClient ? '🟢 متصل بالسحابة' : '⚪ غير متصل بالسحابة');
 }
@@ -4481,11 +4475,15 @@ function saveLocalOnly(){
   catch(e){console.error('Local save after cloud download failed',e);}
 }
 /* ===== المتجر: كل حركة جديدة تُسجَّل مع اسم متجر هذا الجهاز (الاسم يُحفظ على الجهاز ولا يُزامَن) ===== */
-const YM_STORE_KEY='alyaman_store_name';
+const YM_STORES=['المتجر الأم','المتجر الثاني'];
+window.__ymCurStore=YM_STORES[0];
 const YM_STORE_ARRAYS=['sales','purchases','returns','supplierReturns','expenses','customerPayments','supplierPayments','stockAdjustments','cashMovements','salaryTransactions','stocktakes'];
 const ymKnownIds={};
-function ymStoreName(){ try{ return (localStorage.getItem(YM_STORE_KEY)||'').trim(); }catch(_){ return ''; } }
-function ymStoreTag(x){ return (x&&x.store)?` <small style="color:#a16207;font-weight:700;white-space:nowrap">🏬 ${esc(x.store)}</small>`:''; }
+function ymStoreTag(x){ return (x&&x.store)?` <small style="color:${x.store===YM_STORES[0]?'#1e6a3a':'#a16207'};font-weight:700;white-space:nowrap">🏬 ${esc(x.store)}</small>`:''; }
+function ymSetCurStore(v){
+  window.__ymCurStore=YM_STORES.includes(v)?v:YM_STORES[0];
+  document.querySelectorAll('select.ym-store-sel').forEach(el=>{ if(el.value!==window.__ymCurStore) el.value=window.__ymCurStore; });
+}
 function ymMarkKnown(){
   YM_STORE_ARRAYS.forEach(k=>{ const st=ymKnownIds[k]=ymKnownIds[k]||new Set(); (db[k]||[]).forEach(r=>{ if(r&&r.id!=null) st.add(String(r.id)); }); });
 }
@@ -4495,15 +4493,10 @@ function ymStampStore(){
     const st=ymKnownIds[k]=ymKnownIds[k]||new Set();
     (db[k]||[]).forEach(r=>{ if(!r||r.id==null) return; const id=String(r.id); if(st.has(id)) return; st.add(id); fresh.push(r); });
   });
-  const name=ymStoreName();
-  if(!name||fresh.length>40) return;          // لا اسم متجر، أو استيراد/استرجاع كبير: لا نختم
+  if(!fresh.length||fresh.length>40) return;   // لا جديد، أو استيراد/استرجاع كبير: لا نختم
+  const name=window.__ymCurStore||YM_STORES[0];
   fresh.forEach(r=>{ if(!r.store) r.store=name; });
-}
-function ymSaveStoreName(){
-  const v=(document.getElementById('cloudStoreName')?.value||'').trim();
-  try{ if(v) localStorage.setItem(YM_STORE_KEY,v); else localStorage.removeItem(YM_STORE_KEY); }catch(_){}
-  const m=v?('✅ ستُسجَّل كل حركة جديدة من هذا الجهاز باسم: '+v):'تم إيقاف تسجيل اسم المتجر على هذا الجهاز';
-  cloudSetStatus('online',m); alert(m);
+  if(name!==YM_STORES[0]) setTimeout(()=>ymSetCurStore(YM_STORES[0]),0);   // بعد تسجيل عملية المتجر الثاني نعود للمتجر الأم تلقائياً
 }
 ymMarkKnown();
 
