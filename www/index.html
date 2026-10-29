@@ -4019,7 +4019,7 @@ async function cloudSignUp(){
   if(error){cloudSetStatus('error','🔴 '+error.message);return;}
   if(data?.session){
     cloudSetStatus('online','🟢 تم إنشاء الحساب والاتصال');
-    await cloudUpload(true,true);
+    await cloudUpload(true,false);
     startCloudAutoSave();
     await cloudStartRealtime();
     startCloudRealtimeFallback();
@@ -4030,6 +4030,10 @@ async function cloudSignUp(){
 }
 async function cloudGetUser(){
   if(!cloudClient) return null;
+  try{
+    const {data:sd}=await cloudClient.auth.getSession();
+    if(sd?.session?.user) return sd.session.user;
+  }catch(_){}
   const {data,error}=await cloudClient.auth.getUser();
   if(error) return null;
   return data?.user||null;
@@ -4065,28 +4069,9 @@ async function cloudStartRealtime(){
         filter:'user_id=eq.'+user.id
       }, async payload=>{
         const row=payload?.new;
-        if(!row?.payload || !row?.updated_at) return;
-
-        const incoming=cloudTime(row.updated_at);
-        const baseline=cloudTime(cloudLastRemoteUpdatedAt);
-        if(incoming<=baseline) return;
-
-        // إذا كانت النسخة الواردة هي نفسها الموجودة محلياً، حدّث خط الأساس فقط.
-        if(db && row.payload.updatedAt && row.payload.updatedAt===db.updatedAt){
-          cloudApplyRemote(row,true);
-          return;
-        }
-
-        // لا نستبدل تعديلات محلية حقيقية غير مرفوعة.
-        if(cloudLocalChangedSinceBaseline() &&
-           cloudHasRealLocalChanges() &&
-           cloudSig(row.payload)!==cloudSig(db)){
-          cloudConflict=true;
-          cloudSetStatus('error','⚠️ يوجد تعديل محلي غير مرفوع؛ لم يتم استبداله تلقائياً. اضغط «مزامنة الآن».');
-          return;
-        }
-
-        cloudApplyRemote(row,true);
+        if(!row?.updated_at) return;
+        if(cloudTime(row.updated_at)<=cloudTime(cloudLastRemoteUpdatedAt)) return;   // صدى رفعنا نحن
+        cloudSyncCore({silent:true});   // دمج ثلاثي — لا استبدال أعمى لأي طرف
       })
       .subscribe(async status=>{
         const el=document.getElementById('cloudAutoSyncStatus');
@@ -4117,14 +4102,21 @@ async function cloudStartRealtime(){
 
 function startCloudRealtimeFallback(){
   clearInterval(cloudRealtimePollTimer);
-  // الفحص الاحتياطي هو الضمان الأساسي إذا لم تصل WebSocket/Realtime لأي سبب.
+  // فحص احتياطي خفيف: نقرأ ختم الوقت فقط، وننزّل/نرفع فقط عند وجود تغيير فعلي.
   cloudRealtimePollTimer=setInterval(async()=>{
-    if(!cloudClient || cloudConflict || window.__cloudPollBusy || window.__cloudUploadBusy) return;
+    if(!cloudClient || window.__cloudCoreBusy || window.__cloudPollBusy) return;
     window.__cloudPollBusy=true;
-    try{ await cloudSyncNow(true); }
+    try{
+      const user=await cloudGetUser();
+      if(!user) return;
+      const r=await cloudClient.from('alyaman_cloud_data').select('updated_at').eq('user_id',user.id).maybeSingle();
+      const remoteChanged=!r.error && r.data && cloudTime(r.data.updated_at)!==cloudTime(cloudLastRemoteUpdatedAt);
+      const localChanged=(db?.updatedAt||'')!==(cloudLastUploadedLocalUpdatedAt||'');
+      if(remoteChanged||localChanged||(!r.error&&!r.data)) await cloudSyncCore({silent:true});
+    }
     catch(e){ console.error('Cloud realtime fallback failed:',e); }
     finally{ window.__cloudPollBusy=false; }
-  },3000);
+  },4000);
 }
 
 function stopCloudRealtime(){
@@ -4193,67 +4185,157 @@ function cloudApplyRemote(data,silent=false){
   if(!silent) alert('تم تنزيل أحدث نسخة من السحابة لأن بيانات السحابة كانت أحدث.');
   return true;
 }
-async function cloudUpload(silent=false,force=false,snapshotOverride=null){
-  if(window.__cloudUploadBusy){
-    if(silent) return false;
-    for(let w=0; window.__cloudUploadBusy && w<50; w++) await new Promise(r=>setTimeout(r,200));
-    if(window.__cloudUploadBusy) return false;
+/* ===================== مزامنة بدمج ثلاثي (3-way merge) =====================
+   كل جهاز يحتفظ بآخر نسخة متزامنة (base). عند المزامنة: نقارن (base ↔ هذا الجهاز ↔ السحابة)
+   ونجمع التعديلات من الطرفين سجلاً سجلاً بدل استبدال نسخة كاملة بنسخة أخرى، وتُكتب النتيجة
+   بشرط أن السحابة لم تتغيّر أثناء ذلك (compare-and-swap) وإلا أُعيد الدمج. */
+const CLOUD_QTY_KEYS=new Set(['qty','stock','quantity']);   // أرقام تُدمج كفروقات (بيع من هاتفين = خصم الاثنين)
+function cmObj(o){return o&&typeof o==='object'&&!Array.isArray(o)}
+function cmEq(a,b){return cloudCanon(a)===cloudCanon(b)}
+function cmClone(x){return x===undefined?undefined:JSON.parse(JSON.stringify(x))}
+function cmValue(b,l,r,key){
+  if(cmEq(l,r)) return cmClone(l);
+  if(cmEq(b,l)) return cmClone(r);     // تغيّر في السحابة فقط
+  if(cmEq(b,r)) return cmClone(l);     // تغيّر هنا فقط
+  if(typeof l==='number'&&typeof r==='number'&&CLOUD_QTY_KEYS.has(key)){
+    const bb=typeof b==='number'?b:0; return bb+(l-bb)+(r-bb);
   }
-  window.__cloudUploadBusy=true;
-  try{ return await _cloudUploadImpl(silent,force,snapshotOverride); }
-  finally{ window.__cloudUploadBusy=false; }
+  if(Array.isArray(l)&&Array.isArray(r)) return cmArray(Array.isArray(b)?b:[],l,r,key);
+  if(cmObj(l)&&cmObj(r)) return cmObjMerge(cmObj(b)?b:{},l,r);
+  return cmClone(l);                   // تعديل متضارب على نفس الحقل: يفوز هذا الجهاز
 }
-async function _cloudUploadImpl(silent=false,force=false,snapshotOverride=null){
-  if(!cloudClient && !cloudInit()){ if(!silent) alert('أكمل إعداد السحابة أولاً.'); return false; }
+function cmObjMerge(b,l,r){
+  const out={},keys=new Set([...Object.keys(b||{}),...Object.keys(l||{}),...Object.keys(r||{})]);
+  keys.forEach(k=>{ const v=cmValue(b?.[k],l?.[k],r?.[k],k); if(v!==undefined) out[k]=v; });
+  return out;
+}
+function cmIsRecList(a){return Array.isArray(a)&&a.every(x=>cmObj(x)&&x.id!==undefined&&x.id!==null)}
+function cmArray(b,l,r,key){
+  if(key==='auditLog'){
+    const seen=new Set(),all=[];
+    [...l,...r,...b].forEach(x=>{const k=JSON.stringify(x); if(!seen.has(k)){seen.add(k);all.push(x)}});
+    return all.sort((x,y)=>String(y?.at||'').localeCompare(String(x?.at||''))).slice(0,500);
+  }
+  if(!(cmIsRecList(l)&&cmIsRecList(r)&&cmIsRecList(b))) return cmClone(l);
+  const idx=a=>{const m=new Map();a.forEach(x=>m.set(String(x.id),x));return m};
+  const B=idx(b),L=idx(l),R=idx(r),out=new Map();
+  L.forEach((lv,id)=>{
+    const rv=R.get(id),bv=B.get(id);
+    if(rv){ out.set(id, cmEq(lv,rv)?cmClone(lv):cmObjMerge(bv||{},lv,rv)); }
+    else if(bv && cmEq(bv,lv)){ /* حُذف في السحابة ولم نعدّله هنا → يُحذف */ }
+    else out.set(id,cmClone(lv));       // جديد هنا، أو عدّلناه هنا رغم حذفه هناك
+  });
+  // الترتيب: نعتمد ترتيب السحابة كهيكل ثابت (فتتطابق الأجهزة كلها)، ثم ندرج سجلاتنا الجديدة في موضعها النسبي
+  const rIds=r.map(x=>String(x.id)),lIds=l.map(x=>String(x.id));
+  const result=[];
+  rIds.forEach(id=>{
+    if(out.has(id)) result.push(id);
+    else if(!L.has(id)){ const bv=B.get(id); if(!(bv&&cmEq(bv,R.get(id)))) { out.set(id,cmClone(R.get(id))); result.push(id); } }
+  });
+  lIds.forEach((id,i)=>{
+    if(!out.has(id)||result.indexOf(id)>=0) return;
+    let pos=result.length;
+    for(let k=i+1;k<lIds.length;k++){ const j=result.indexOf(lIds[k]); if(j>=0){pos=j;break} }
+    result.splice(pos,0,id);
+  });
+  return result.map(id=>out.get(id));
+}
+function cloudMerge(base,local,remote){
+  const m=cmObjMerge(base||{},local||{},remote||{});
+  m.updatedAt=([local?.updatedAt,remote?.updatedAt].filter(Boolean).sort().pop())||new Date().toISOString();
+  return m;
+}
+const CLOUD_BASE_DB='alyaman_cloud_base';
+function cbOpen(){return new Promise((res,rej)=>{const r=indexedDB.open(CLOUD_BASE_DB,1);r.onupgradeneeded=()=>r.result.createObjectStore('k');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+async function cbGet(){
+  try{const d=await cbOpen();return await new Promise((res,rej)=>{const q=d.transaction('k').objectStore('k').get('base');q.onsuccess=()=>{d.close();res(q.result||null)};q.onerror=()=>{d.close();rej(q.error)}})}
+  catch(e){return null}
+}
+async function cbSet(v){
+  try{const d=await cbOpen();await new Promise((res,rej)=>{const tx=d.transaction('k','readwrite');if(v)tx.objectStore('k').put(v,'base');else tx.objectStore('k').delete('base');tx.oncomplete=()=>{d.close();res()};tx.onerror=()=>{d.close();rej(tx.error)}})}
+  catch(e){console.warn('cloud base save failed',e)}
+}
+function cloudNextStamp(prev){ return new Date(Math.max(Date.now(),cloudTime(prev)+1)).toISOString(); }
+function cloudBackupBeforeApply(){
+  try{ localStorage.setItem(KEY+'_precloud',JSON.stringify({at:new Date().toISOString(),db})); }
+  catch(_){ try{localStorage.removeItem(KEY+'_precloud')}catch(__){} }
+}
+async function cloudSyncCore(opts){
+  opts=opts||{};
+  if(window.__cloudCoreBusy){ window.__cloudCoreAgain=true; return false; }
+  window.__cloudCoreBusy=true; window.__cloudUploadBusy=true;
+  try{ return await _cloudCoreImpl(opts); }
+  catch(e){ console.error('Cloud sync failed:',e); cloudSetStatus('error','🔴 فشلت المزامنة: '+(e&&e.message||e)); return false; }
+  finally{
+    window.__cloudCoreBusy=false; window.__cloudUploadBusy=false;
+    if(window.__cloudCoreAgain){ window.__cloudCoreAgain=false; setTimeout(()=>cloudSyncCore({silent:true}),300); }
+  }
+}
+async function _cloudCoreImpl(opts){
+  if(!cloudClient && !cloudInit()){ if(!opts.silent) alert('أكمل إعداد السحابة أولاً.'); return false; }
   const user=await cloudGetUser();
-  if(!user){if(!silent) alert('سجّل الدخول إلى الحساب السحابي أولاً.');return false;}
-
-  // الرفع اليدوي يمكنه التجاوز صراحةً. الرفع التلقائي آمن ولا يكتب فوق نسخة أحدث.
-  if(!force){
-    const remote=await cloudGetRemote();
-    if(remote.error){cloudSetStatus('error','🔴 تعذر فحص النسخة السحابية: '+remote.error.message);return false;}
-    const rd=remote.data;
-    if(rd?.updated_at){
-      const rt=cloudTime(rd.updated_at);
-      const baseline=cloudTime(cloudLastRemoteUpdatedAt);
-      const local=cloudTime(db?.updatedAt);
-
-      if(!baseline){
-        if(rt>local){
-          return cloudApplyRemote(rd,true);
-        }
-      }else if(rt>baseline && local>baseline){
-        // لا تعارض حقيقي إذا لم يغيّر هذا الجهاز أي بيانات فعلية، أو كانت البيانات متطابقة
-        if(!cloudHasRealLocalChanges() || cloudSig(rd.payload)===cloudSig(db)){
-          return cloudApplyRemote(rd,true);
-        }
-        cloudConflict=true;
-        cloudSetStatus('error','⚠️ تعارض: توجد تعديلات أحدث من مستخدم آخر — لم يتم استبدالها.');
-        return false;
-      }else if(rt>baseline && local<=baseline){
-        return cloudApplyRemote(rd,true);
-      }
+  if(!user){ if(!opts.silent) alert('سجّل الدخول إلى الحساب السحابي أولاً.'); return false; }
+  const stored=await cbGet();
+  const base=(stored&&stored.uid===user.id)?stored.payload:null;
+  const TBL='alyaman_cloud_data';
+  for(let attempt=0;attempt<5;attempt++){
+    const snapshot=JSON.parse(JSON.stringify(db));
+    const rem=await cloudGetRemote();
+    if(rem.error){ cloudSetStatus('error','🔴 تعذر قراءة السحابة: '+rem.error.message); return false; }
+    const rd=rem.data, hasRemote=!!(rd&&rd.payload&&typeof rd.payload==='object');
+    let merged, writeNeeded;
+    if(!hasRemote){ merged=snapshot; writeNeeded=true; }
+    else if(opts.overwrite){ merged=snapshot; writeNeeded=true; }
+    else{
+      merged=cloudMerge(base||{},snapshot,rd.payload);
+      writeNeeded=cloudSig(merged)!==cloudSig(rd.payload);
     }
+    let stamp=rd?.updated_at||'';
+    if(writeNeeded){
+      const newStamp=cloudNextStamp(rd?.updated_at);
+      merged.updatedAt=newStamp;
+      cloudSetStatus('busy','⬆️ جارٍ دمج التعديلات وحفظها في السحابة...');
+      let res;
+      if(!rd){
+        res=await cloudClient.from(TBL).insert({user_id:user.id,payload:merged,updated_at:newStamp}).select('updated_at');
+        if(res.error){ if(String(res.error.code)==='23505') continue; cloudSetStatus('error','🔴 فشل رفع البيانات: '+res.error.message); return false; }
+      }else if(attempt<4){
+        // كتابة مشروطة: لا تنجح إلا إذا لم يغيّر جهاز آخر السحابة منذ قراءتنا لها
+        res=await cloudClient.from(TBL).update({payload:merged,updated_at:newStamp}).eq('user_id',user.id).eq('updated_at',rd.updated_at).select('updated_at');
+        if(res.error){ cloudSetStatus('error','🔴 فشل رفع البيانات: '+res.error.message); return false; }
+        if(!res.data||!res.data.length) continue;   // تغيّرت السحابة أثناء ذلك → أعد القراءة والدمج
+      }else{
+        res=await cloudClient.from(TBL).upsert({user_id:user.id,payload:merged,updated_at:newStamp},{onConflict:'user_id'});
+        if(res.error){ cloudSetStatus('error','🔴 فشل رفع البيانات: '+res.error.message); return false; }
+      }
+      stamp=newStamp;
+    }
+    await cbSet({uid:user.id,payload:JSON.parse(JSON.stringify(merged))});   // مرجع المزامنة القادمة = ما هو في السحابة الآن
+    // طبّق النتيجة محلياً (مع حماية أي تعديل جرى على الجهاز أثناء الاتصال)
+    const cur=db, moved=cloudSig(cur)!==cloudSig(snapshot);
+    let finalLocal=moved?cloudMerge(snapshot,cur,merged):merged;
+    finalLocal.updatedAt=moved?(cur.updatedAt||merged.updatedAt):merged.updatedAt;
+    const needApply=cloudSig(finalLocal)!==cloudSig(cur);
+    if(needApply){
+      cloudBackupBeforeApply();
+      window.__cloudWriting=true;
+      try{ db=JSON.parse(JSON.stringify(finalLocal)); ymNormalizeDb(); saveLocalOnly(); } finally{ window.__cloudWriting=false; }
+      try{render();}catch(e){console.error(e);}
+    }
+    cloudConflict=false;
+    cloudLastRemoteUpdatedAt=stamp;
+    cloudLastSyncedSig=cloudSig(merged);
+    const pending=moved&&cloudSig(finalLocal)!==cloudSig(merged);
+    cloudLastUploadedLocalUpdatedAt=pending?'':(db?.updatedAt||'');
+    if(pending) window.__cloudCoreAgain=true;
+    cloudSetLastSync(stamp, writeNeeded?'auto':'sync');
+    cloudSetStatus('online', needApply&&hasRemote ? '🟢 تم دمج أحدث تعديلات الأجهزة الأخرى' : (writeNeeded?'🟢 تم الحفظ في السحابة ✓':'🟢 السحابة والجهاز متطابقان'));
+    return true;
   }
-
-  cloudSetStatus('busy','⬆️ جارٍ حفظ جميع بيانات البرنامج في السحابة...');
-  // رفع نسخة كاملة ومستقلة من قاعدة بيانات البرنامج، وليس المبيعات فقط.
-  const payload=JSON.parse(JSON.stringify(snapshotOverride || db));
-  const stamp=new Date().toISOString();
-  const {error}=await cloudClient.from('alyaman_cloud_data').upsert({
-    user_id:user.id,
-    payload:payload,
-    updated_at:stamp
-  },{onConflict:'user_id'});
-  if(error){cloudSetStatus('error','🔴 فشل رفع البيانات: '+error.message);return false;}
-  cloudConflict=false;
-  cloudLastRemoteUpdatedAt=stamp;
-  cloudLastUploadedLocalUpdatedAt=db?.updatedAt||'';
-  cloudLastSyncedSig=cloudSig(payload);
-  cloudSetLastSync(stamp, force ? 'sync' : 'auto');
-  cloudSetStatus('online',force ? '🟢 تمت عملية رفع البيانات إلى السحابة بنجاح ✓' : '🟢 تم الحفظ التلقائي في السحابة بنجاح ✓');
-  return true;
+  cloudSetStatus('error','⚠️ السحابة مزدحمة بتعديلات متتالية، ستُعاد المحاولة تلقائياً.');
+  return false;
 }
+async function cloudUpload(silent=false,force=false){ return cloudSyncCore({silent:silent,overwrite:!!force}); }
 async function cloudDownload(silent=false){
   if(!cloudClient && !cloudInit()){if(!silent) alert('أكمل إعداد السحابة أولاً.');return false;}
   const user=await cloudGetUser();
@@ -4271,54 +4353,21 @@ async function cloudDownload(silent=false){
     return false;
   }
   if(!silent && !confirm('سيتم استبدال بيانات هذا الجهاز بالنسخة الموجودة في السحابة. هل تريد المتابعة؟')) return false;
-  return cloudApplyRemote(data,true);
+  cloudBackupBeforeApply();
+  const ok=cloudApplyRemote(data,true);
+  await cbSet({uid:user.id,payload:JSON.parse(JSON.stringify(data.payload))});
+  return ok;
 }
-async function cloudReconcileOnConnect(silent=false){
-  if(!cloudClient && !cloudInit()) return false;
-  const {data,error}=await cloudGetRemote();
-  if(error){cloudSetStatus('error','🔴 تعذر قراءة السحابة: '+error.message);return false;}
-  if(!data){
-    cloudLastRemoteUpdatedAt='';
-    return await cloudUpload(true,true);
-  }
-  const remoteTime=cloudTime(data.updated_at);
-  const localTime=cloudTime(db?.updatedAt);
-  if(remoteTime>localTime){
-    return cloudApplyRemote(data,silent);
-  }
-  if(localTime>remoteTime){
-    return await cloudUpload(true,true);
-  }
-  cloudLastRemoteUpdatedAt=data.updated_at||'';
-  cloudLastUploadedLocalUpdatedAt=db?.updatedAt||'';
-  cloudLastSyncedSig=cloudSig(db);
-  cloudSetStatus('online','🟢 السحابة والجهاز متطابقان');
-  cloudSetLastSync(data.updated_at);
-  return true;
-}
-async function cloudSyncNow(silent=false){
-  if(!cloudClient && !cloudInit()) return false;
-  return await cloudUpload(silent,false);
-}
+async function cloudReconcileOnConnect(silent=false){ return cloudSyncCore({silent:silent}); }
+async function cloudSyncNow(silent=false){ return cloudSyncCore({silent:silent}); }
 async function cloudManualUpload(){
-  let ok = await cloudUpload(false,false);
-  if(!ok && cloudConflict){
-    if(confirm('يوجد تعارض: السحابة تحتوي على نسخة أحدث.\n\nموافق = تنزيل بيانات السحابة واستبدال بيانات هذا الجهاز (اختر هذا إذا كان هذا الجهاز بلا معاملات).\nإلغاء = خيارات أخرى.')){
-      cloudConflict=false;
-      const r=await cloudGetRemote();
-      if(r.data) return cloudApplyRemote(r.data,false);
-      return false;
-    }
-    if(confirm('هل تريد استبدال بيانات السحابة ببيانات هذا الجهاز؟\n\nتحذير: ستُفقد بيانات السحابة الحالية.')){
-      ok = await cloudUpload(false,true);
-    } else { return false; }
-  }
+  const ok=await cloudSyncCore({silent:false});
   if(ok){
     const msg = currentLang==='en'
-      ? '✅ Data upload to the cloud completed successfully'
+      ? '✅ Data synced with the cloud successfully'
       : (currentLang==='tr'
-        ? '✅ Veriler buluta başarıyla yüklendi'
-        : '✅ تمت عملية رفع البيانات إلى السحابة بنجاح');
+        ? '✅ Veriler bulutla başarıyla eşitlendi'
+        : '✅ تمت المزامنة مع السحابة بنجاح (دُمجت تعديلات الأجهزة الأخرى مع بيانات هذا الجهاز)');
     alert(msg);
   }
   return ok;
@@ -4335,7 +4384,7 @@ function scheduleCloudSync(){
     const snapshotStamp=snapshot.updatedAt||'';
     cloudQueuedStamp=snapshotStamp;
     cloudSaveQueue=cloudSaveQueue
-      .then(()=>cloudUpload(true,false,snapshot))
+      .then(()=>cloudUpload(true,false))
       .then(()=>{
         // إذا حدث تعديل جديد أثناء الرفع، نرفع آخر نسخة كاملة مرة أخرى.
         if(db?.updatedAt && db.updatedAt!==snapshotStamp && cloudQueuedStamp!==db.updatedAt){
@@ -4376,6 +4425,7 @@ async function cloudLogout(){
   cloudLastRemoteUpdatedAt='';
   cloudLastUploadedLocalUpdatedAt='';
   cloudConflict=false;
+  await cbSet(null);
   cloudSetStatus('offline','⚪ تم تسجيل الخروج من السحابة');
 }
 async function restoreCloudClient(){
@@ -4416,7 +4466,6 @@ window.addEventListener('online', async()=>{
     startCloudRealtimeFallback();
   }catch(e){ console.error('Cloud online sync failed:',e); }
 });
-restoreCloudClient();
 
 function saveLocalOnly(){
   const payload=JSON.stringify(db);
