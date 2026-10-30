@@ -132,6 +132,7 @@ Object.assign(D,{"المتجر": "Mağaza", "المتجر الأم": "Ana mağaz
 Object.assign(D,{"🛒 المبيعات (حركة البيع)": "🛒 Satışlar (satış hareketleri)", "📦 المشتريات (حركة الشراء)": "📦 Alışlar (alış hareketleri)", "↩️ المرتجعات": "↩️ İadeler", "💸 المصروفات": "💸 Giderler", "👥 الموظفون (معاشات وسلف ومكافآت)": "👥 Çalışanlar (maaşlar, avanslar ve primler)", "💵 حركة الصندوق (مختصر)": "💵 Kasa hareketi (özet)", "مقدار المبيعات": "Satış tutarı", "مقدار المشتريات": "Alış tutarı", "مقدار المصروفات": "Gider tutarı", "البند": "Kalem", "لا توجد حركات لهذا المتجر": "Bu mağaza için hareket yok", "الموظفين": "Çalışanlar"});
 Object.assign(D,{"كل المتاجر": "Tüm mağazalar"});
 Object.assign(D,{"أرصدة المتاجر": "Mağaza bakiyeleri", "اضغط على متجر لاختياره للسحب أو الإيداع": "Çekim veya yatırma için bir mağazaya dokunun", "صافي رصيد المتجر الحالي": "Mağazanın mevcut net bakiyesi", "بعد السحب يبقى في المتجر": "Çekimden sonra mağazada kalan", "بعد الإيداع يصبح رصيد المتجر": "Yatırmadan sonra mağaza bakiyesi"});
+Object.assign(D,{"إغلاق البرنامج؟": "Program kapatılsın mı?", "↩️ استرداد للزبون": "↩️ Müşteriye iade", "إغلاق البرنامج": "Programı kapat", "مطوّر البرنامج": "Program Geliştiricisi", "🏬 المتجر (الموظف يُضاف إلى هذا المتجر)": "🏬 Mağaza (personel bu mağazaya eklenir)", "🏬 عرض موظفي المتجر": "🏬 Mağaza personelini göster", "🏬 المتجر (المصروف يُسجَّل على هذا المتجر)": "🏬 Mağaza (gider bu mağazaya kaydedilir)", "🏬 عرض مصروفات المتجر": "🏬 Mağaza giderlerini göster", "🔴 فشلت المزامنة:": "🔴 Senkronizasyon başarısız:", "⬆️ جارٍ دمج التعديلات وحفظها في السحابة...": "⬆️ Değişiklikler birleştirilip buluta kaydediliyor...", "🟢 تم الحفظ في السحابة ✓": "🟢 Buluta kaydedildi ✓", "🟢 تم دمج أحدث تعديلات الأجهزة الأخرى": "🟢 Diğer cihazların en son değişiklikleri birleştirildi", "⚠️ السحابة مزدحمة بتعديلات متتالية، ستُعاد المحاولة تلقائياً.": "⚠️ Bulut art arda gelen değişikliklerle meşgul, otomatik olarak yeniden denenecek.", "✅ تمت المزامنة مع السحابة بنجاح (دُمجت تعديلات الأجهزة الأخرى مع بيانات هذا الجهاز)": "✅ Bulutla senkronizasyon başarılı (diğer cihazların değişiklikleri bu cihazın verileriyle birleştirildi)", "تغيير المتجر سيُفرغ الفاتورة الحالية (البيع/الشراء). متابعة؟": "Mağaza değişikliği mevcut faturayı (satış/alış) boşaltacak. Devam edilsin mi?", "بعد السحب يبقى في المتجر": "Çekimden sonra mağazada kalan", "بعد السحب يبقى في الصندوق": "Çekimden sonra kasada kalan", "بعد الإيداع يصبح رصيد المتجر": "Yatırmadan sonra mağaza bakiyesi", "بعد الإيداع يصبح الصندوق": "Yatırmadan sonra kasa", "استلمنا من": "Tahsil ettik:", "دفعنا إلى": "Ödeme yaptık:", "تعذر التحقق من الحفظ": "Kayıt doğrulanamadı", "لا توجد كلمة محفوظة": "Kayıtlı parola yok", "🔐 أدخل كلمة مرور البرنامج لتفعيل البصمة:": "🔐 Parmak izini etkinleştirmek için program parolasını girin:"});
 var AR=/[؀-ۿ]/,DIG={'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9','٫':',','٬':'.'};
 var active=false,re=null,cache=new Map();
 function esc(s){return s.replace(/[.*+?^${}()|[\]\\\/]/g,'\\$&')}
@@ -4556,7 +4557,7 @@ function ymEmpVisible(e,id){ const v=ymStmtSel(id); return !v||ymEmpStore(e)===v
 function ymDebtStoreSel(kind){ return ymStmtSel(kind==='supplier'?'sdStore':'cdStore'); }
 function ymMoveEmployee(id,to){
   if(!to) return; const e=(db.employees||[]).find(x=>x.id==id); if(!e) return;
-  if(!confirm('نقل الموظف «'+e.name+'» إلى '+to+'؟')) { render(); return; }
+  if(!confirm(window.__TR?('«'+e.name+'» personeli '+to+' mağazasına taşınsın mı?'):('نقل الموظف «'+e.name+'» إلى '+to+'؟'))) { render(); return; }
   e.store=to; save();
 }
 function ymStmtMulti(){ return ymStoreList().length>1; }
@@ -4580,7 +4581,7 @@ function ymFillItemStoreUI(){
 }
 function ymMoveItem(id,to){
   if(!to) return; const it=(db.items||[]).find(x=>x.id==id); if(!it) return;
-  if(!confirm('نقل الصنف «'+it.name+'» (مع كامل رصيده) إلى '+to+'؟')) { render(); return; }
+  if(!confirm(window.__TR?('«'+it.name+'» ürünü (tüm stoğuyla) '+to+' mağazasına taşınsın mı?'):('نقل الصنف «'+it.name+'» (مع كامل رصيده) إلى '+to+'؟'))) { render(); return; }
   it.store=to; save();
 }
 function ymStoreLbl(it){ return ymStoreList().length>1 ? ' ['+ymItemStore(it)+']' : ''; }
@@ -10377,10 +10378,10 @@ async function saveSecret(pw){
   var iv=crypto.getRandomValues(new Uint8Array(12));
   var ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},key,new TextEncoder().encode(pw));
   await idbOp('readwrite',function(st){return st.put({key:key,iv:iv,ct:ct},'bio')});
-  var back=await readSecret();if(back!==pw)throw new Error('تعذر التحقق من الحفظ')}
+  var back=await readSecret();if(back!==pw)throw new Error(T('تعذر التحقق من الحفظ','Kayıt doğrulanamadı'))}
 async function readSecret(){
   var r=await idbOp('readonly',function(st){return st.get('bio')});
-  if(!r)throw new Error('لا توجد كلمة محفوظة');
+  if(!r)throw new Error(T('لا توجد كلمة محفوظة','Kayıtlı parola yok'));
   var pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:r.iv},r.key,r.ct);
   return new TextDecoder().decode(pt)}
 async function wipe(){var p=plugin();sdel(FLAG);try{await idbOp('readwrite',function(st){return st.delete('bio')})}catch(e){}
