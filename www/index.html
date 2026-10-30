@@ -10365,7 +10365,7 @@ async function available(){availErr='';var p=plugin();if(!p){availErr=T('إضا�
 function enabled(){return sget(FLAG)==='1'}
 async function verify(){var p=plugin();
   await p.verifyIdentity({reason:T('افتح برنامج اليمان','Alyaman uygulamasını aç'),title:T('اليمان للتجارة','Alyaman Ticaret'),
-    subtitle:T('استخدم بصمة الإصبع','Parmak izinizi kullanın'),negativeButtonText:T('استخدام كلمة المرور','Parolayı kullan'),useFallback:false,maxAttempts:3})}
+    subtitle:T('استخدم بصمة الإصبع','Parmak izinizi kullanın'),description:T('المس مستشعر البصمة لفتح البرنامج','Uygulamayı açmak için parmak izi sensörüne dokunun'),negativeButtonText:T('استخدام كلمة المرور','Parolayı kullan'),useFallback:false,maxAttempts:3})}
 /* تخزين كلمة المرور: مفتاح AES-GCM غير قابل للاستخراج داخل IndexedDB (بدل مخزن الإضافة الذي كان يفشل).
    لا يُفتح السر إلا بعد نجاح البصمة؛ والتحقق يتم بقراءة السر فور حفظه. */
 function idb(){return new Promise(function(res,rej){var r=indexedDB.open('alyaman_bio_db',1);
@@ -10406,7 +10406,7 @@ function ensureBtn(){if(btn&&document.body.contains(btn))return btn;
   en.style.cssText='display:none;width:100%;margin-top:10px;padding:11px;border:1px dashed #caa24d;border-radius:12px;background:transparent;color:#123454;font:700 14px Cairo,sans-serif;cursor:pointer';
   en.addEventListener('click',function(){
     var f=$('lockPassword');
-    if(!f||!f.value){toast(T('أدخل كلمة المرور أولًا ثم اضغط تفعيل البصمة','أدخل كلمة المرور'),false);return}
+    if(!f||!f.value){toast(T('أدخل كلمة المرور أولًا ثم اضغط تفعيل البصمة','Önce parolayı girin, sonra parmak izini etkinleştirin'),false);return}
     enableAfter=true;captured=f.value;$('unlockBtn').click()});
   row.parentNode.insertBefore(en,row);return btn}
 function setIf(el,prop,val){if(prop==='display'){if(el.style.display!==val)el.style.display=val}else if(el[prop]!==val)el[prop]=val}
@@ -10527,6 +10527,12 @@ document.addEventListener('DOMContentLoaded',function(){
     sdel(DECL);await enable(v[0])});
   $('bioSettingsNote').textContent=plugin()?'':T('تظهر الميزة بعد تثبيت النسخة الجديدة من التطبيق على الأندرويد.','Özellik, Android uygulamasının yeni sürümünde görünür.');
   refreshUI()});
+
+/* تبديل اللغة: حدّث نصوص زر البصمة وقسم الإعدادات فورًا */
+window.addEventListener('ymlangchange',function(){refreshUI();
+  try{var st=$('bioSettings');if(st){var h=st.querySelector('h3');if(h)h.textContent='🔐 '+T('الفتح بالبصمة','Parmak iziyle açma');
+    var p=st.querySelector('p.muted');if(p){var b=p.querySelector('b');p.firstChild.nodeValue=T('الحالة: ','Durum: ')}
+    var n=$('bioSettingsNote');if(n)n.textContent=plugin()?'':T('تظهر الميزة بعد تثبيت النسخة الجديدة من التطبيق على الأندرويد.','Özellik, Android uygulamasının yeni sürümünde görünür.')}}catch(e){}});
 
 window.alyamanBio={enabled:enabled,disable:wipe,_tryBio:tryBio};
 })();
