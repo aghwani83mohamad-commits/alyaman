@@ -12116,7 +12116,7 @@ function enter(u,how){
   audit((how||T('تسجيل دخول','Giriş'))+': '+u.name);persist();
   $('alyPick').classList.remove('on');document.documentElement.classList.remove('aly-picking');
   applyPerms();
-  try{var n=$('ymUn');if(n)n.textContent=u.name;var av=$('ymAv');if(av)av.textContent=(u.name||'?').trim().charAt(0).toUpperCase()}catch(e){}
+  try{var n=$('ymUn');if(n)n.textContent=u.name+(myStore()?' · '+myStore():'');var av=$('ymAv');if(av)av.textContent=(u.name||'?').trim().charAt(0).toUpperCase()}catch(e){}
   var cur=document.querySelector('.page.active');
   if(cur&&!can(PAGE_PERM[cur.id]||cur.id)){try{window.show('home',$('navHome'))}catch(e){}}
   renderUsers();
@@ -12288,7 +12288,9 @@ window.alyUserEdit=function(id){
 /* ---------- حجب بيانات المتاجر الأخرى (مستخدم مقيّد بمتجر) ---------- */
 function storeList(){try{return ymStoreList()}catch(e){return []}}
 function storeOptsHtml(sel){return '<option value="">'+E(T('كل المتاجر','Tüm mağazalar'))+'</option>'+storeList().map(function(n){return '<option value="'+E(n)+'"'+(sel===n?' selected':'')+'>'+E(n)+'</option>'}).join('')}
-function myStore(){if(!session||session.role==='admin'||!session.store)return '';return session.store}
+function userStore(){if(!session||session.role==='admin'||!session.store)return '';return session.store}
+var lockStore='';try{lockStore=S.getItem('aly_lock_store')||''}catch(e){}
+function myStore(){return userStore()||(session&&storeList().indexOf(lockStore)>-1?lockStore:'')}
 function stOf(r){return (r&&r.store)||storeList()[0]}
 function inList(r){var l=storeList();return (r&&r.store&&l.indexOf(r.store)>-1)?r.store:l[0]}
 var FKEYS=['sales','purchases','returns','supplierReturns','expenses','customerPayments','supplierPayments','stockAdjustments','cashMovements','salaryTransactions','stocktakes','cancelledSales'];
@@ -12351,10 +12353,22 @@ if(typeof _save==='function')window.save=function(){
   try{return _save.apply(this,arguments)}finally{if(was)swapIn()}
 };
 (function(){var f=window.ymSetCurStore;if(typeof f==='function')window.ymSetCurStore=function(v){var ms=myStore();return f.call(this,ms||v)}})();
-(function(){var f=window.ymOpenStoreSettings;if(typeof f==='function')window.ymOpenStoreSettings=function(){if(myStore()){denied();return}return f.apply(this,arguments)}})();
+(function(){var f=window.ymOpenStoreSettings;if(typeof f==='function')window.ymOpenStoreSettings=function(){if(userStore()){denied();return}return f.apply(this,arguments)}})();
+var wasEnforced=false;
 function enforceSelects(){
   try{partyFields()}catch(e){}
-  var ms=myStore();if(!ms)return;
+  var ms=myStore();
+  if(!ms){
+    if(wasEnforced){
+      wasEnforced=false;
+      document.querySelectorAll('select').forEach(function(sel){sel.removeAttribute('data-sig');if(sel.dataset)delete sel.dataset.sig});
+      try{ymFillStoreSelects()}catch(e){}
+      document.querySelectorAll('select').forEach(function(sel){if([].some.call(sel.options,function(o){return o.value==='__all'})&&sel.value!=='__all'){sel.value='__all'}});
+      try{partyFields();render()}catch(e){}
+    }
+    return;
+  }
+  wasEnforced=true;
   window.__ymCurStore=ms;
   var names=storeList();
   document.querySelectorAll('select').forEach(function(sel){
@@ -12371,7 +12385,7 @@ function fillStoreSel(){var s=$('proUserStore');if(!s)return;var v=s.value;s.inn
 /* ---------- المتجر للزبائن والموردين ---------- */
 window.alyMyStore=myStore;
 window.ymMoveParty=function(kind,id,to){
-  if(!to||myStore())return;
+  if(!to||userStore())return;
   var r=(db[kind]||[]).filter(function(x){return x.id==id})[0];if(!r)return;
   if(!confirm(T('نقل «'+r.name+'» إلى '+to+'؟','«'+r.name+'» '+to+' mağazasına taşınsın mı?'))){try{render()}catch(e){}return}
   r.store=to;audit(T('نقل جهة إلى متجر','Kayıt mağazaya taşındı')+': '+r.name+' → '+to);persist();
@@ -12398,6 +12412,29 @@ PARTY.forEach(function(p){
   };
 });
 window.addEventListener('ymlangchange',function(){try{renderUsers();partyFields()}catch(e){}});
+
+/* ---------- اختيار المتجر من شاشة القفل ---------- */
+function lockStoreUI(){
+  var card=document.querySelector('#appLock .lock-card');if(!card)return;
+  var names=storeList(),box=$('alyLockStoreBox');
+  if(!box){
+    box=document.createElement('div');box.id='alyLockStoreBox';
+    box.style.cssText='margin:12px 18px 0;text-align:start';
+    box.innerHTML='<label id="alyLockStoreLbl" style="display:block;font-weight:800;font-size:13px;color:#d9e4f0;margin-bottom:5px"></label><select id="alyLockStore" style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #cbd5e1;border-radius:12px;font-family:inherit;font-size:15px;font-weight:700;color:#123454;background:#fff"></select>';
+    var ub=$('unlockBtn');if(ub&&ub.parentNode)ub.parentNode.insertBefore(box,ub);else card.appendChild(box);
+    $('alyLockStore').onchange=function(){lockStore=this.value;try{S.setItem('aly_lock_store',lockStore)}catch(e){}};
+  }
+  box.style.display=names.length>1?'':'none';
+  var lang=T('a','t'),sig=names.join('\u0001')+'|'+lang+'|'+lockStore,sel=$('alyLockStore');
+  if(sel.getAttribute('data-sig')!==sig){
+    if(names.indexOf(lockStore)<0)lockStore='';
+    sel.innerHTML='<option value="">'+E(T('🏬 كل المتاجر','🏬 Tüm mağazalar'))+'</option>'+names.map(function(n){return '<option value="'+E(n)+'">🏬 '+E(n)+'</option>'}).join('');
+    sel.value=lockStore;sel.setAttribute('data-sig',sig);
+    $('alyLockStoreLbl').textContent=T('المتجر الذي تريد العمل عليه','Çalışmak istediğiniz mağaza');
+  }
+}
+setInterval(function(){try{lockStoreUI()}catch(e){}},1000);
+window.addEventListener('ymlangchange',function(){try{var s=$('alyLockStore');if(s)s.removeAttribute('data-sig');lockStoreUI()}catch(e){}});
 
 /* ---------- تشغيل ---------- */
 function init(){ensureBox();users();renderUsers();applyPerms()}
