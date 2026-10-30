@@ -12253,7 +12253,7 @@ window.alyUserEdit=function(id){
    '<label>'+E(T('الاسم','Ad'))+'</label><input type="text" id="umName" value="'+E(u.name)+'">'+
    '<label>'+E(T('الصلاحية (الدور)','Rol'))+'</label><select id="umRole">'+Object.keys(ROLES).map(function(r){return '<option value="'+r+'"'+(u.role===r?' selected':'')+'>'+E(roleLabel(r))+'</option>'}).join('')+'</select>'+
    '<label>'+E(T('رمز سري جديد (اتركه فارغًا دون تغيير)','Yeni PIN (değiştirmemek için boş bırakın)'))+'</label><input type="password" id="umPin" inputmode="numeric" maxlength="12" autocomplete="new-password" placeholder="4-12">'+
-   '<label>'+E(T('الأقسام المسموح بها','İzin verilen bölümler'))+'</label><div class="um-perms" id="umPerms">'+PAGES.map(function(p){return '<label><input type="checkbox" value="'+p[0]+'"'+((u.role==='admin'||(u.perms||[]).indexOf(p[0])>-1)?' checked':'')+'><span>'+E(T(p[1],p[2]))+'</span></label>'}).join('')+'</div>'+
+   (u.pin&&actives().length===1&&u.role==='admin'?'<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="umNoPin" style="width:18px;height:18px"><span>'+E(T('إزالة الرمز السري (العودة للعمل الفردي بدون شاشة دخول)','PIN\'i kaldır (tek kullanıcı modu, giriş ekranı olmadan)'))+'</span></label>':'')+'<label>'+E(T('الأقسام المسموح بها','İzin verilen bölümler'))+'</label><div class="um-perms" id="umPerms">'+PAGES.map(function(p){return '<label><input type="checkbox" value="'+p[0]+'"'+((u.role==='admin'||(u.perms||[]).indexOf(p[0])>-1)?' checked':'')+'><span>'+E(T(p[1],p[2]))+'</span></label>'}).join('')+'</div>'+
    '<div class="um-err" id="umErr"></div><div class="um-row"><button type="button" class="um-ok" id="umSave">'+E(T('حفظ','Kaydet'))+'</button><button type="button" class="um-no" id="umCancel">'+E(T('إلغاء','İptal'))+'</button></div></div>';
   m.classList.add('on');
   function syncPerms(){
@@ -12273,6 +12273,7 @@ window.alyUserEdit=function(id){
     if(perms.indexOf('home')<0)perms.push('home');
     u.name=n;u.role=r;u.perms=perms;
     if(p){u.pin=await makePin(p);setFail(u.id,null)}
+    else if($('umNoPin')&&$('umNoPin').checked&&actives().length===1){delete u.pin;setFail(u.id,null)}
     audit(T('تعديل مستخدم','Kullanıcı düzenlendi')+': '+n);persist();m.classList.remove('on');
     if(session&&session.id===u.id){session=u;applyPerms()}
     renderUsers();try{renderProfessionalAudit()}catch(e){}
