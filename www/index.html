@@ -12111,6 +12111,7 @@ function needPicker(){var a=actives();return a.length>1||a.some(function(u){retu
 function enter(u,how){
   session=u;
   try{sessionStorage.setItem('aly_session_uid',u.id)}catch(e){}
+  try{snapKnown();enforceSelects();wrapAll()}catch(e){console.warn(e)}
   audit((how||T('تسجيل دخول','Giriş'))+': '+u.name);persist();
   $('alyPick').classList.remove('on');document.documentElement.classList.remove('aly-picking');
   applyPerms();
@@ -12198,19 +12199,19 @@ function ensureBox(){
   var sec=h.parentNode,box=document.createElement('div');box.id='alyUsersBox';
   var fg=h.nextElementSibling,pu=$('professionalUsers');
   sec.insertBefore(box,h);box.appendChild(h);
-  if(fg&&fg.classList.contains('form-grid')){fg.innerHTML='<input id="proUserName" placeholder="اسم المستخدم"><input id="proUserPin" type="password" inputmode="numeric" maxlength="12" autocomplete="new-password" placeholder="الرمز السري (4-12 رقم)"><select id="proUserRole"><option value="cashier">مبيعات / Cashier</option><option value="accountant">محاسب / Accountant</option><option value="admin">مدير / Administrator</option></select><button class="primary" onclick="addProfessionalUser()">إضافة مستخدم</button>';box.appendChild(fg)}
+  if(fg&&fg.classList.contains('form-grid')){fg.innerHTML='<input id="proUserName" placeholder="اسم المستخدم"><input id="proUserPin" type="password" inputmode="numeric" maxlength="12" autocomplete="new-password" placeholder="الرمز السري (4-12 رقم)"><select id="proUserRole"><option value="cashier">مبيعات / Cashier</option><option value="accountant">محاسب / Accountant</option><option value="admin">مدير / Administrator</option></select><select id="proUserStore" title="المتجر"></select><button class="primary" onclick="addProfessionalUser()">إضافة مستخدم</button>';box.appendChild(fg)}
   if(pu)box.appendChild(pu);
 }
 function adminNoPin(){return admins().some(function(u){return !u.pin})&&actives().length>1}
 function renderUsers(){
-  ensureBox();var el=$('professionalUsers');if(!el)return;
+  ensureBox();try{fillStoreSel()}catch(e){}var el=$('professionalUsers');if(!el)return;
   var list=live(),warn='';
   if(adminNoPin())warn='<div class="aly-warn">'+E(T('⚠️ يوجد مدير بدون رمز سري؛ أي شخص يستطيع الدخول به. عيّن له رمزًا من زر «تعديل».','⚠️ PIN\'siz bir yönetici var; herkes onunla girebilir. «Düzenle» ile PIN belirleyin.'))+'</div>';
   el.innerHTML=warn+'<div style="overflow:auto"><table class="aly-ut"><tr><th>'+E(T('المستخدم','Kullanıcı'))+'</th><th>'+E(T('الصلاحية','Rol'))+'</th><th>'+E(T('الحالة','Durum'))+'</th><th></th></tr>'+
    list.map(function(u){
     var me=session&&session.id===u.id;
     return '<tr><td><div class="u-name"><span class="aly-av">'+E((u.name||'?').trim().charAt(0).toUpperCase())+'</span><span>'+E(u.name)+(me?' <small style="color:#1c7a3d">('+E(T('أنت','siz'))+')</small>':'')+'</span></div></td>'+
-     '<td><span class="aly-badge '+(u.role==='admin'?'admin':'')+'">'+E(roleLabel(u.role))+'</span></td>'+
+     '<td><span class="aly-badge '+(u.role==='admin'?'admin':'')+'">'+E(roleLabel(u.role))+'</span>'+(u.role!=='admin'&&u.store?' <span class="aly-badge">🏬 '+E(u.store)+'</span>':'')+'</td>'+
      '<td><span class="aly-badge '+(u.active?'ok':'off')+'">'+E(u.active?T('مفعّل','Aktif'):T('موقوف','Durduruldu'))+'</span>'+(u.pin?'':' <small style="opacity:.6">'+E(T('بدون رمز','PIN yok'))+'</small>')+'</td>'+
      '<td><div class="aly-ua"><button type="button" onclick="alyUserEdit(\''+E(u.id)+'\')">✏️ '+E(T('تعديل','Düzenle'))+'</button><button type="button" onclick="alyUserToggle(\''+E(u.id)+'\')">'+(u.active?'⏸ '+E(T('إيقاف','Durdur')):'▶ '+E(T('تفعيل','Etkinleştir')))+'</button><button type="button" class="dg" onclick="alyUserDelete(\''+E(u.id)+'\')">🗑 '+E(T('حذف','Sil'))+'</button></div></td></tr>';
    }).join('')+'</table></div>';
@@ -12224,7 +12225,8 @@ window.addProfessionalUser=async function(){
   if(!n)return alert(T('أدخل اسم المستخدم','Kullanıcı adını girin'));
   if(nameTaken(n))return alert(T('هذا الاسم مستخدم مسبقًا','Bu ad zaten kullanılıyor'));
   if(!pinOk(p))return alert(T('الرمز السري يجب أن يكون من 4 إلى 12 رقمًا','PIN 4-12 haneli rakam olmalı'));
-  var u={id:'u_'+Date.now(),name:n,role:r,active:true,perms:PRESET[r].slice(),createdAt:new Date().toISOString(),pin:await makePin(p)};
+  var stv=$('proUserStore')?$('proUserStore').value:'';
+  var u={id:'u_'+Date.now(),name:n,role:r,active:true,perms:PRESET[r].slice(),store:(r==='admin'?'':stv),createdAt:new Date().toISOString(),pin:await makePin(p)};
   users().push(u);audit((T('إضافة مستخدم','Kullanıcı eklendi'))+': '+n+' ('+r+')');persist();
   $('proUserName').value='';if($('proUserPin'))$('proUserPin').value='';
   renderUsers();try{renderProfessionalAudit()}catch(e){}
@@ -12252,6 +12254,7 @@ window.alyUserEdit=function(id){
   m.innerHTML='<div class="um-card"><h3>✏️ '+E(T('تعديل المستخدم','Kullanıcıyı düzenle'))+'</h3>'+
    '<label>'+E(T('الاسم','Ad'))+'</label><input type="text" id="umName" value="'+E(u.name)+'">'+
    '<label>'+E(T('الصلاحية (الدور)','Rol'))+'</label><select id="umRole">'+Object.keys(ROLES).map(function(r){return '<option value="'+r+'"'+(u.role===r?' selected':'')+'>'+E(roleLabel(r))+'</option>'}).join('')+'</select>'+
+   '<label>'+E(T('المتجر المسموح به','İzin verilen mağaza'))+'</label><select id="umStore">'+storeOptsHtml(u.store||'')+'</select><small style="display:block;opacity:.7;margin-top:4px">'+E(T('المستخدم المقيّد بمتجر لا يرى بيانات المتاجر الأخرى. المدير يرى كل المتاجر دائمًا.','Bir mağazaya bağlı kullanıcı diğer mağazaların verilerini göremez. Yönetici her zaman tüm mağazaları görür.'))+'</small>'+
    '<label>'+E(T('رمز سري جديد (اتركه فارغًا دون تغيير)','Yeni PIN (değiştirmemek için boş bırakın)'))+'</label><input type="password" id="umPin" inputmode="numeric" maxlength="12" autocomplete="new-password" placeholder="4-12">'+
    (u.pin&&actives().length===1&&u.role==='admin'?'<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="umNoPin" style="width:18px;height:18px"><span>'+E(T('إزالة الرمز السري (العودة للعمل الفردي بدون شاشة دخول)','PIN\'i kaldır (tek kullanıcı modu, giriş ekranı olmadan)'))+'</span></label>':'')+'<label>'+E(T('الأقسام المسموح بها','İzin verilen bölümler'))+'</label><div class="um-perms" id="umPerms">'+PAGES.map(function(p){return '<label><input type="checkbox" value="'+p[0]+'"'+((u.role==='admin'||(u.perms||[]).indexOf(p[0])>-1)?' checked':'')+'><span>'+E(T(p[1],p[2]))+'</span></label>'}).join('')+'</div>'+
    '<div class="um-err" id="umErr"></div><div class="um-row"><button type="button" class="um-ok" id="umSave">'+E(T('حفظ','Kaydet'))+'</button><button type="button" class="um-no" id="umCancel">'+E(T('إلغاء','İptal'))+'</button></div></div>';
@@ -12271,7 +12274,7 @@ window.alyUserEdit=function(id){
     if(u.role==='admin'&&r!=='admin'&&lastAdminGuard(u)){er.textContent=T('لا يمكن تغيير دور آخر مدير','Son yöneticinin rolü değiştirilemez');return}
     var perms=r==='admin'?ALL.slice():[].slice.call($('umPerms').querySelectorAll('input:checked')).map(function(c){return c.value});
     if(perms.indexOf('home')<0)perms.push('home');
-    u.name=n;u.role=r;u.perms=perms;
+    u.name=n;u.role=r;u.perms=perms;u.store=(r==='admin')?'':($('umStore')?$('umStore').value:'');
     if(p){u.pin=await makePin(p);setFail(u.id,null)}
     else if($('umNoPin')&&$('umNoPin').checked&&actives().length===1){delete u.pin;setFail(u.id,null)}
     audit(T('تعديل مستخدم','Kullanıcı düzenlendi')+': '+n);persist();m.classList.remove('on');
@@ -12280,11 +12283,95 @@ window.alyUserEdit=function(id){
   };
 };
 
+
+/* ---------- حجب بيانات المتاجر الأخرى (مستخدم مقيّد بمتجر) ---------- */
+function storeList(){try{return ymStoreList()}catch(e){return []}}
+function storeOptsHtml(sel){return '<option value="">'+E(T('كل المتاجر','Tüm mağazalar'))+'</option>'+storeList().map(function(n){return '<option value="'+E(n)+'"'+(sel===n?' selected':'')+'>'+E(n)+'</option>'}).join('')}
+function myStore(){if(!session||session.role==='admin'||!session.store)return '';return session.store}
+function stOf(r){return (r&&r.store)||storeList()[0]}
+function inList(r){var l=storeList();return (r&&r.store&&l.indexOf(r.store)>-1)?r.store:l[0]}
+var FKEYS=['sales','purchases','returns','supplierReturns','expenses','customerPayments','supplierPayments','stockAdjustments','cashMovements','salaryTransactions','stocktakes','cancelledSales'];
+var SKEYS=FKEYS.concat(['items','employees','customers','suppliers']);
+var swapped=null,depth=0,known={};
+function buildVis(ms){
+  var d=db,emps={},cu={},su={},vis={};
+  (d.employees||[]).forEach(function(e){if(inList(e)===ms)emps[String(e.id)]=1});
+  (d.sales||[]).concat(d.returns||[],d.customerPayments||[]).forEach(function(r){if(r&&stOf(r)===ms&&r.customerId!=null)cu[String(r.customerId)]=1});
+  (d.purchases||[]).concat(d.supplierReturns||[],d.supplierPayments||[]).forEach(function(r){if(r&&stOf(r)===ms&&r.supplierId!=null)su[String(r.supplierId)]=1});
+  FKEYS.forEach(function(k){vis[k]=function(r){return stOf(r)===ms}});
+  vis.items=function(r){return inList(r)===ms};
+  vis.employees=function(r){return inList(r)===ms};
+  vis.attendanceRecords=function(r){return !!emps[String(r&&r.employeeId)]};
+  vis.customers=function(r){return !!r&&(r.store===ms||!!cu[String(r.id)])};
+  vis.suppliers=function(r){return !!r&&(r.store===ms||!!su[String(r.id)])};
+  return vis;
+}
+function swapIn(){
+  var ms=myStore();if(!ms||typeof db==='undefined'){swapped=null;return}
+  var vis=buildVis(ms);swapped={full:{},view:{},lens:{},vis:vis};
+  Object.keys(vis).forEach(function(k){var a=db[k];if(!Array.isArray(a))return;swapped.full[k]=a;var v=a.filter(vis[k]);swapped.view[k]=v;swapped.lens[k]=v.length;db[k]=v});
+}
+function mergeBack(){
+  if(!swapped)return;var sw=swapped;swapped=null;
+  Object.keys(sw.full).forEach(function(k){
+    var cur=db[k];
+    if(cur===sw.view[k]&&Array.isArray(cur)&&cur.length===sw.lens[k]){db[k]=sw.full[k];return}
+    db[k]=sw.full[k].filter(function(r){return !sw.vis[k](r)}).concat(Array.isArray(cur)?cur:[]);
+  });
+}
+function snapKnown(){known={};if(typeof db==='undefined')return;SKEYS.forEach(function(k){var st=known[k]=new Set();(db[k]||[]).forEach(function(r){if(r&&r.id!=null)st.add(String(r.id))})})}
+function stampNew(){
+  var ms=myStore();if(!ms||typeof db==='undefined')return;
+  SKEYS.forEach(function(k){var st=known[k]||(known[k]=new Set());(db[k]||[]).forEach(function(r){if(!r||r.id==null)return;var id=String(r.id);if(st.has(id))return;st.add(id);if(!r.store)r.store=ms})});
+}
+function wrapRead(f){
+  var w=function(){
+    if(!myStore())return f.apply(this,arguments);
+    var top=(depth++===0);if(top)swapIn();
+    try{return f.apply(this,arguments)}finally{if(--depth===0){mergeBack();stampNew()}}
+  };w.__alyW=1;return w;
+}
+var NAME_OK=/^(render|show|print|open|build|gen|generate|export|refresh|fill|draw|calc|compute|report|list|get|summary|stmt|statement|ymRender|ymShow|ymBuild|ymStmt|ymDebt|ymPrint|ymOpen|ymInv|ymRefresh|ymDraw)/;
+var NAME_NO=/(save|backup|sync|snapshot|store|lock|login|restore|import|clear|reset|cloud|unlock|users?|Pro(fessional)?User|audit)/i;
+function wrapAll(){
+  if(!myStore())return;
+  Object.getOwnPropertyNames(window).forEach(function(n){
+    if(!NAME_OK.test(n)||NAME_NO.test(n))return;
+    var f;try{f=window[n]}catch(e){return}
+    if(typeof f!=='function'||f.__alyW)return;
+    var src=Function.prototype.toString.call(f);
+    if(src.indexOf('[native code]')>-1||/^\s*(async\b|class\b)/.test(src))return;
+    try{window[n]=wrapRead(f)}catch(e){}
+  });
+}
+var _save=window.save;
+if(typeof _save==='function')window.save=function(){
+  var was=!!swapped;if(was)mergeBack();stampNew();
+  try{return _save.apply(this,arguments)}finally{if(was)swapIn()}
+};
+(function(){var f=window.ymSetCurStore;if(typeof f==='function')window.ymSetCurStore=function(v){var ms=myStore();return f.call(this,ms||v)}})();
+(function(){var f=window.ymOpenStoreSettings;if(typeof f==='function')window.ymOpenStoreSettings=function(){if(myStore()){denied();return}return f.apply(this,arguments)}})();
+function enforceSelects(){
+  var ms=myStore();if(!ms)return;
+  window.__ymCurStore=ms;
+  var names=storeList();
+  document.querySelectorAll('select').forEach(function(sel){
+    var o=[].slice.call(sel.options);if(!o.length)return;
+    var hasStore=o.some(function(x){return names.indexOf(x.value)>-1});if(!hasStore)return;
+    if(!o.every(function(x){return x.value===''||x.value==='__all'||names.indexOf(x.value)>-1}))return;
+    o.forEach(function(x){if(x.value!==''&&x.value!==ms)x.remove()});
+    if(!o.some(function(x){return x.value===ms&&x.parentNode})){var op=document.createElement('option');op.value=ms;op.textContent=ms;sel.appendChild(op)}
+    if(sel.value!==ms){sel.value=ms;try{sel.dispatchEvent(new Event('change',{bubbles:true}))}catch(e){}}
+  });
+}
+function fillStoreSel(){var s=$('proUserStore');if(!s)return;var v=s.value;s.innerHTML=storeOptsHtml(v)}
+
 /* ---------- تشغيل ---------- */
 function init(){ensureBox();users();renderUsers();applyPerms()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 setTimeout(init,900);
 setInterval(tick,400);
-setInterval(function(){if(session)applyPerms()},2000);
+setInterval(function(){if(session){applyPerms();try{enforceSelects();wrapAll()}catch(e){}}},1500);
+setInterval(function(){try{fillStoreSel()}catch(e){}},2500);
 })();
 </script>
