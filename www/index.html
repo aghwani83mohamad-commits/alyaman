@@ -3188,7 +3188,12 @@ function bcPick(m){
   .inv-card .inv-items{margin-top:4px;font-size:14px;opacity:.8}
   .inv-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
   .inv-actions button{flex:1 1 110px;padding:10px 8px;font-family:'Cairo',sans-serif;font-weight:800}
-  .back-btn{border:1px solid #d5dde5;background:#eef2f5;color:#123454;padding:10px 14px;border-radius:11px;font-family:'Cairo',sans-serif;font-weight:800;cursor:pointer;margin-bottom:10px}
+  .back-btn{display:inline-flex;align-items:center;gap:10px;margin:0 0 14px;padding:7px 16px 7px 8px;border:1px solid #dfe6ee;border-radius:999px;background:linear-gradient(180deg,#fff,#f3f6fa);color:#123454;font-family:'Cairo',sans-serif;font-weight:800;font-size:14px;line-height:1.3;cursor:pointer;box-shadow:0 2px 8px rgba(18,52,84,.08);transition:transform .15s,box-shadow .15s,border-color .15s;-webkit-tap-highlight-color:transparent}
+  html[dir=rtl] .back-btn{padding:7px 8px 7px 16px}
+  .back-btn:before{content:'';flex:none;width:28px;height:28px;border-radius:50%;box-shadow:0 2px 5px rgba(18,52,84,.28);background-color:#123454;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 5l7 7-7 7'/%3E%3C/svg%3E"),linear-gradient(135deg,#1f5f8b,#123454);background-repeat:no-repeat;background-position:center;background-size:14px 14px,100% 100%}
+  html[dir=ltr] .back-btn:before{transform:scaleX(-1)}
+  .back-btn:hover{border-color:#caa24d;box-shadow:0 4px 12px rgba(18,52,84,.14)}
+  .back-btn:active{transform:scale(.96);box-shadow:0 1px 4px rgba(18,52,84,.12)}
 </style>
 <script id="subtabs-js">
   window.openSub=function(pageId,target){
@@ -3225,7 +3230,7 @@ function bcPick(m){
     </div>
   </section>
   <section data-sub="ab-customers" class="sub-hidden">
-    <button type="button" class="back-btn" onclick="backSub('addressBook')">⬅ رجوع لدفتر العناوين</button>
+    <button type="button" class="back-btn" onclick="backSub('addressBook')">رجوع لدفتر العناوين</button>
     
     <h3 id="abCustomersTitle">👤 الزبائن</h3>
     <input id="abCName" placeholder="اسم الزبون">
@@ -3241,7 +3246,7 @@ function bcPick(m){
     <div id="addressCustomersList"></div>
   </section>
   <section data-sub="ab-suppliers" class="sub-hidden">
-    <button type="button" class="back-btn" onclick="backSub('addressBook')">⬅ رجوع لدفتر العناوين</button>
+    <button type="button" class="back-btn" onclick="backSub('addressBook')">رجوع لدفتر العناوين</button>
     
     <h3 id="abSuppliersTitle">🏢 الموردون</h3>
     <input id="abSName" placeholder="اسم المورد">
@@ -3257,7 +3262,7 @@ function bcPick(m){
     <div id="addressSuppliersList"></div>
   </section>
   <section data-sub="ab-orders" class="sub-hidden">
-    <button type="button" class="back-btn" onclick="backSub('addressBook')">⬅ رجوع لدفتر العناوين</button>
+    <button type="button" class="back-btn" onclick="backSub('addressBook')">رجوع لدفتر العناوين</button>
     
     <h3 id="abOrdersTitle">📝 نصوص الطلبات</h3>
     <input id="orderTitle" placeholder="عنوان الطلب">
@@ -3619,7 +3624,7 @@ function bcPick(m){
     </div>
   </section>
   <section data-sub="emp-add" class="sub-hidden">
-    <button type="button" class="back-btn" onclick="backSub('employees')">⬅ رجوع لقائمة الموظفين والرواتب</button>
+    <button type="button" class="back-btn" onclick="backSub('employees')">رجوع لقائمة الموظفين والرواتب</button>
     <h3>➕ إضافة موظف</h3>
     <div class="row">
       <div><label id="empNameLabel">اسم الموظف</label><input id="empName" placeholder="اسم الموظف"></div>
@@ -3630,7 +3635,7 @@ function bcPick(m){
     <button class="primary" onclick="addEmployee()" id="empAdd">حفظ الموظف</button>
   </section>
   <section data-sub="emp-ops" class="sub-hidden">
-    <button type="button" class="back-btn" onclick="backSub('employees')">⬅ رجوع لقائمة الموظفين والرواتب</button>
+    <button type="button" class="back-btn" onclick="backSub('employees')">رجوع لقائمة الموظفين والرواتب</button>
     
     <h3 id="empSalaryOps">تسجيل راتب / سلفة / مكافأة</h3>
     <div class="row">
@@ -3648,7 +3653,7 @@ function bcPick(m){
     <button class="primary" onclick="addSalaryTransaction()" id="empSave">حفظ العملية</button>
   </section>
   <section data-sub="emp-att" class="sub-hidden">
-    <button type="button" class="back-btn" onclick="backSub('employees')">⬅ رجوع لقائمة الموظفين والرواتب</button>
+    <button type="button" class="back-btn" onclick="backSub('employees')">رجوع لقائمة الموظفين والرواتب</button>
     
     <h3 id="empAttendanceTable">جدول الدوام والحضور والغياب والإجازات</h3>
     <div class="row">
@@ -3683,7 +3688,7 @@ function bcPick(m){
     </div><div class="ym-stmt-store-wrap" style="margin:8px 0"><label>🏬 المتجر</label><select id="attStoreFilter" onchange="render()"></select></div><div id="attendanceList"></div>
     </section>
   <section data-sub="emp-detail" class="sub-hidden">
-    <button type="button" class="back-btn" onclick="backSub('employees')">⬅ رجوع لقائمة الموظفين والرواتب</button>
+    <button type="button" class="back-btn" onclick="backSub('employees')">رجوع لقائمة الموظفين والرواتب</button>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px">
       <h3 id="empDetail">كشف تفصيلي لكل موظف</h3>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -3695,7 +3700,7 @@ function bcPick(m){
     <div id="employeeDetail"></div>
   </section>
   <section data-sub="emp-list" class="sub-hidden">
-    <button type="button" class="back-btn" onclick="backSub('employees')">⬅ رجوع لقائمة الموظفين والرواتب</button>
+    <button type="button" class="back-btn" onclick="backSub('employees')">رجوع لقائمة الموظفين والرواتب</button>
     
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
       <h3 id="empEmployeesList">قائمة الموظفين</h3>
@@ -3703,7 +3708,7 @@ function bcPick(m){
     </div><div class="ym-stmt-store-wrap" style="margin:8px 0"><label>🏬 عرض موظفي المتجر</label><select id="empListStore" onchange="render()"></select></div><div id="employeesList"></div>
   </section>
   <section data-sub="emp-salaries" class="sub-hidden">
-    <button type="button" class="back-btn" onclick="backSub('employees')">⬅ رجوع لقائمة الموظفين والرواتب</button>
+    <button type="button" class="back-btn" onclick="backSub('employees')">رجوع لقائمة الموظفين والرواتب</button>
     
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
       <h3 id="empSalaryList">كشف رواتب الموظفين</h3>
@@ -10258,7 +10263,7 @@ div[id$="List"] table,div[id$="list"] table{margin-bottom:2px}
       btn.appendChild(sp); btn.appendChild(document.createTextNode(lb[1]));
       btn.onclick=function(){openSec(pid,id)};
       grid.appendChild(btn);
-      var bk=document.createElement('button'); bk.type='button'; bk.className='back-btn'; bk.textContent='⬅ رجوع للقائمة';
+      var bk=document.createElement('button'); bk.type='button'; bk.className='back-btn'; bk.textContent='رجوع للقائمة';
       bk.onclick=function(){menu(pid)};
       sec.insertBefore(bk,sec.firstChild);
       sec.classList.add('sub-hidden');
