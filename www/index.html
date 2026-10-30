@@ -4683,7 +4683,7 @@ function save() {
   try{ ymStampStore(); }catch(e){ console.warn('store stamp failed',e); }
   try{ ymFillStoreSelects(); }catch(e){}
   if (!Array.isArray(db.auditLog)) db.auditLog = [];
-  db.auditLog.unshift({at: stamp, action: 'Data saved', user: 'Administrator'});
+  db.auditLog.unshift({at: stamp, action: 'Data saved', user:(window.alyUserName?window.alyUserName():'Administrator')});
   db.auditLog = db.auditLog.slice(0, 500);
 
   // الحفظ الأساسي يجب أن ينجح حتى لو امتلأت مساحة localStorage.
@@ -7806,11 +7806,11 @@ function renderProfessionalAccounting(){
     <h3>📈 قائمة الأرباح والخسائر</h3><table class="pro-table"><tr><td>المبيعات</td><td>${money(sales)}</td></tr><tr><td>المرتجعات</td><td>${money(returns)}</td></tr><tr><td>صافي الإيرادات</td><td>${money(revenue)}</td></tr><tr><td>المشتريات / تكلفة تقديرية</td><td>${money(purchases)}</td></tr><tr><td>المصروفات</td><td>${money(expenses)}</td></tr><tr><th>صافي الربح التقديري</th><th>${money(net)}</th></tr></table>`;
   renderProfessionalUsers(); renderProfessionalAudit();
 }
-function addProfessionalUser(){ const n=document.getElementById('proUserName').value.trim(), r=document.getElementById('proUserRole').value; if(!n) return alert('أدخل اسم المستخدم'); db.users.push({id:'u_'+Date.now(),name:n,role:r,createdAt:now()}); db.auditLog.unshift({at:now(),action:'User added: '+n,user:'Administrator'}); localStorage.setItem(KEY,JSON.stringify(db)); document.getElementById('proUserName').value=''; renderProfessionalUsers(); renderProfessionalAudit(); }
+function addProfessionalUser(){ const n=document.getElementById('proUserName').value.trim(), r=document.getElementById('proUserRole').value; if(!n) return alert('أدخل اسم المستخدم'); db.users.push({id:'u_'+Date.now(),name:n,role:r,createdAt:now()}); db.auditLog.unshift({at:now(),action:'User added: '+n,user:(window.alyUserName?window.alyUserName():'Administrator')}); localStorage.setItem(KEY,JSON.stringify(db)); document.getElementById('proUserName').value=''; renderProfessionalUsers(); renderProfessionalAudit(); }
 function renderProfessionalUsers(){ const el=document.getElementById('professionalUsers'); if(!el)return; el.innerHTML='<table class="pro-table"><tr><th>المستخدم</th><th>الصلاحية</th></tr>'+db.users.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.role)}</td></tr>`).join('')+'</table>'; }
 function renderProfessionalAudit(){ const el=document.getElementById('professionalAudit'); if(!el)return; el.innerHTML='<div style="max-height:180px;overflow:auto"><table class="pro-table"><tr><th>الوقت</th><th>العملية</th><th>المستخدم</th></tr>'+db.auditLog.slice(0,50).map(x=>`<tr><td>${proDate(x)}</td><td>${esc(x.action)}</td><td>${esc(x.user||'Administrator')}</td></tr>`).join('')+'</table></div>'; }
 function exportAuditLog(){ const blob=new Blob([JSON.stringify(db.auditLog,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='alyaman_audit_log.json';a.click();URL.revokeObjectURL(a.href); }
-function createManualSnapshot(){ const snap={at:now(),db:JSON.parse(JSON.stringify(db))}; localStorage.setItem(KEY+'_manualsnapshot',JSON.stringify(snap)); db.auditLog.unshift({at:now(),action:'Manual restore point created',user:'Administrator'}); localStorage.setItem(KEY,JSON.stringify(db)); alert('تم إنشاء نقطة استعادة بنجاح'); }
+function createManualSnapshot(){ const snap={at:now(),db:JSON.parse(JSON.stringify(db))}; localStorage.setItem(KEY+'_manualsnapshot',JSON.stringify(snap)); db.auditLog.unshift({at:now(),action:'Manual restore point created',user:(window.alyUserName?window.alyUserName():'Administrator')}); localStorage.setItem(KEY,JSON.stringify(db)); alert('تم إنشاء نقطة استعادة بنجاح'); }
 setTimeout(()=>{try{renderProfessionalAccounting()}catch(e){console.warn(e)}},500);
 
 </script>
@@ -8353,7 +8353,7 @@ document.addEventListener('DOMContentLoaded',initHeaderWatermark);
     const rec={id:Date.now(),supplierId:sid,itemId:iid,name:it.name,qty:q,price,total,currency,note,date:new Date().toISOString(),settle:(refundCash<=0?'debt':(refundCash>=total?'cash':'mixed')),refundCash:refundCash,paidAmount:paidAmt};
     db.supplierReturns.unshift(rec);
     if(paidAmt>0){ db.supplierPayments=db.supplierPayments||[]; db.supplierPayments.unshift({id:rec.id+1,supplierId:sid,amount:paidAmt,currency,date:new Date().toISOString(),note:'مبلغ مدفوع للمورد مع ترجيع مرتجع-'+rec.id,returnId:rec.id}); }
-    db.auditLog=db.auditLog||[]; db.auditLog.unshift({at:new Date().toISOString(),action:'إضافة ترجيع مشتريات للمورد',user:'Administrator'});
+    db.auditLog=db.auditLog||[]; db.auditLog.unshift({at:new Date().toISOString(),action:'إضافة ترجيع مشتريات للمورد',user:(window.alyUserName?window.alyUserName():'Administrator')});
     save(); renderAdditions(); if(paidEl) paidEl.value=''; try{document.getElementById('srNote').value='';}catch(e){}
     showSupplierReturnNotice(rec);
   };
@@ -8365,7 +8365,7 @@ document.addEventListener('DOMContentLoaded',initHeaderWatermark);
     const system=Number(it.qty||0), variance=actual-system;
     db.stocktakes.unshift({id:Date.now(),itemId:iid,name:it.name,systemQty:system,actualQty:actual,variance,note:document.getElementById('stNote').value.trim(),date:new Date().toISOString()});
     it.qty=actual;
-    db.auditLog=db.auditLog||[]; db.auditLog.unshift({at:new Date().toISOString(),action:'تنفيذ جرد فعلي: '+it.name,user:'Administrator'});
+    db.auditLog=db.auditLog||[]; db.auditLog.unshift({at:new Date().toISOString(),action:'تنفيذ جرد فعلي: '+it.name,user:(window.alyUserName?window.alyUserName():'Administrator')});
     document.getElementById('stActual').value='';document.getElementById('stNote').value='';
     save(); renderAdditions(); alert('تم حفظ الجرد وتحديث كمية المخزون.');
   };
@@ -8389,7 +8389,7 @@ document.addEventListener('DOMContentLoaded',initHeaderWatermark);
     s.cancelled=true; s.cancelledAt=new Date().toISOString();
     db.cancelledSales=Array.isArray(db.cancelledSales)?db.cancelledSales:[];
     db.cancelledSales.unshift({id:Date.now(),saleId:id,date:s.cancelledAt,total:s.total||0});
-    db.auditLog=db.auditLog||[]; db.auditLog.unshift({at:s.cancelledAt,action:'إلغاء فاتورة رقم '+(s.invoiceNo||id),user:'Administrator'});
+    db.auditLog=db.auditLog||[]; db.auditLog.unshift({at:s.cancelledAt,action:'إلغاء فاتورة رقم '+(s.invoiceNo||id),user:(window.alyUserName?window.alyUserName():'Administrator')});
     save(); renderAdditions(); alert('تم إلغاء الفاتورة وإرجاع الكمية للمخزون.');
   };
 
@@ -8499,7 +8499,7 @@ document.addEventListener('DOMContentLoaded',initHeaderWatermark);
   };
 
   function audit(action,detail){
-    db.auditLog.unshift({at:new Date().toISOString(),action,detail:detail||'',user:'Administrator'});
+    db.auditLog.unshift({at:new Date().toISOString(),action,detail:detail||'',user:(window.alyUserName?window.alyUserName():'Administrator')});
     db.auditLog=db.auditLog.slice(0,1000);
   }
   function moneyE(n){return typeof moneyA==='function'?moneyA(n):Number(n||0).toLocaleString((window.__TR?'tr-TR':'ar-SY'),{maximumFractionDigits:2});}
@@ -11969,5 +11969,321 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
   /* احتياط: بعد أي رسم كامل أو تغيير لغة نحدّث العدّادات */
   window.addEventListener('ymlangchange',function(){ for(var i=0;i<CFG.length;i++) update(CFG[i]); });
+})();
+</script>
+
+<style id="aly-users-css">
+#alyPick{position:fixed;inset:0;z-index:2147483645;display:none;align-items:center;justify-content:center;padding:18px;background:linear-gradient(135deg,#0b2238,#123454 55%,#173b5c);font-family:'Cairo',sans-serif;overflow:auto}
+#alyPick.on{display:flex}
+html.aly-picking body>*:not(#alyPick):not(script):not(style):not(link){visibility:hidden!important}
+#alyPick .ap-card{width:min(440px,100%);background:#fff;border:2px solid rgba(202,162,77,.55);border-radius:24px;padding:26px 22px 22px;box-shadow:0 20px 50px rgba(0,0,0,.4);text-align:center;color:#123454}
+#alyPick h2{margin:0 0 4px;font-size:22px}
+#alyPick .ap-sub{margin:0 0 18px;color:#64748b;font-size:14px}
+#alyPick .ap-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px}
+#alyPick .ap-user{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border:1px solid #dfe6ee;border-radius:16px;background:linear-gradient(180deg,#fff,#f3f6fa);cursor:pointer;font-family:inherit;color:#123454;transition:transform .15s,border-color .15s,box-shadow .15s}
+#alyPick .ap-user:hover{border-color:#caa24d;box-shadow:0 4px 12px rgba(18,52,84,.15)}
+#alyPick .ap-user:active{transform:scale(.96)}
+#alyPick .ap-av,.aly-av{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#fff;background:linear-gradient(135deg,#1f5f8b,#123454);box-shadow:0 3px 8px rgba(18,52,84,.3)}
+#alyPick .ap-user b{font-size:14px;word-break:break-word}
+#alyPick .ap-user small{color:#caa24d;font-weight:800}
+#alyPick .ap-pin{display:none}
+#alyPick .ap-pin.on{display:block}
+#alyPick .ap-pin input{width:100%;box-sizing:border-box;margin:14px 0 6px;padding:14px;border:1px solid #cbd5e1;border-radius:12px;font-size:22px;letter-spacing:8px;text-align:center;outline:none}
+#alyPick .ap-pin input:focus{border-color:#1f5f8b}
+#alyPick .ap-err{min-height:20px;color:#c0392b;font-weight:800;font-size:13px}
+#alyPick .ap-btn{width:100%;margin-top:8px;padding:13px;border:0;border-radius:12px;font-weight:800;font-size:16px;font-family:inherit;cursor:pointer;background:linear-gradient(135deg,#1f5f8b,#123454);color:#fff}
+#alyPick .ap-btn.alt{background:#eef2f5;color:#123454}
+#alyPick .ap-link{margin-top:14px;background:none;border:0;color:#1f5f8b;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;text-decoration:underline}
+.aly-ut{width:100%;border-collapse:collapse;margin-top:10px}
+.aly-ut th,.aly-ut td{padding:10px 8px;border-bottom:1px solid #e6ebf1;text-align:start;vertical-align:middle}
+.aly-ut th{background:#eef3f7;color:#123454;font-size:13px}
+.aly-ut .u-name{display:flex;align-items:center;gap:10px;font-weight:800}
+.aly-ut .aly-av{width:34px;height:34px;font-size:15px;flex:none}
+.aly-badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:800;background:#eef3f7;color:#123454}
+.aly-badge.admin{background:#fff3d6;color:#8a6410}
+.aly-badge.off{background:#fde7e7;color:#a32a2a}
+.aly-badge.ok{background:#e4f6ea;color:#1c7a3d}
+.aly-ua{display:flex;gap:6px;flex-wrap:wrap}
+.aly-ua button{padding:6px 10px;border:1px solid #d5dde5;border-radius:9px;background:#fff;color:#123454;font-family:inherit;font-weight:700;font-size:12px;cursor:pointer}
+.aly-ua button.dg{color:#a32a2a;border-color:#f0c4c4}
+.aly-warn{margin:10px 0;padding:10px 12px;border-radius:12px;background:#fff6e0;border:1px solid #f0d58a;color:#7a5a08;font-weight:700;font-size:13px}
+#alyUM{position:fixed;inset:0;z-index:2147483640;display:none;align-items:center;justify-content:center;padding:14px;background:rgba(8,20,33,.6);overflow:auto;font-family:'Cairo',sans-serif}
+#alyUM.on{display:flex}
+#alyUM .um-card{width:min(480px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:20px;padding:20px;color:#123454;box-shadow:0 20px 50px rgba(0,0,0,.4)}
+#alyUM h3{margin:0 0 12px}
+#alyUM label{display:block;margin:10px 0 4px;font-weight:800;font-size:13px}
+#alyUM input[type=text],#alyUM input[type=password],#alyUM select{width:100%;box-sizing:border-box;padding:11px;border:1px solid #cbd5e1;border-radius:10px;font-family:inherit;font-size:15px}
+#alyUM .um-perms{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-top:6px}
+#alyUM .um-perms label{display:flex;align-items:center;gap:8px;margin:0;padding:8px 10px;border:1px solid #e6ebf1;border-radius:10px;font-weight:700;cursor:pointer}
+#alyUM .um-perms input{width:18px;height:18px;flex:none}
+#alyUM .um-row{display:flex;gap:8px;margin-top:16px}
+#alyUM .um-row button{flex:1;padding:12px;border:0;border-radius:12px;font-family:inherit;font-weight:800;font-size:15px;cursor:pointer}
+#alyUM .um-ok{background:linear-gradient(135deg,#1f5f8b,#123454);color:#fff}
+#alyUM .um-no{background:#eef2f5;color:#123454}
+#alyUM .um-err{min-height:18px;margin-top:8px;color:#c0392b;font-weight:800;font-size:13px}
+@media(max-width:480px){#alyUM .um-perms{grid-template-columns:1fr}}
+</style>
+<div id="alyPick" role="dialog" aria-modal="true"></div>
+<div id="alyUM" role="dialog" aria-modal="true"></div>
+<script id="aly-users-perms">
+(function(){'use strict';
+var S=window.localStorage, FAILK='aly_pin_fail';
+function T(ar,tr){var l='ar';try{l=(typeof currentLang!=='undefined')?currentLang:'ar'}catch(e){}return l==='tr'?tr:ar}
+function $(i){return document.getElementById(i)}
+function E(s){return String(s==null?'':s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]})}
+function jget(k,d){try{return JSON.parse(S.getItem(k))||d}catch(e){return d}}
+
+/* ---------- تعريف الصلاحيات ---------- */
+var PAGES=[
+ ['home','🏠 الرئيسية','🏠 Ana sayfa','navHome'],
+ ['items','📦 الأصناف','📦 Ürünler','navItems'],
+ ['productInventory','🗃️ المخزون','🗃️ Envanter','navProductInventory'],
+ ['sales','🛒 المبيعات','🛒 Satışlar','navSales'],
+ ['returns','↩️ المرتجعات','↩️ İadeler','navReturns'],
+ ['purchases','📥 المشتريات','📥 Alışlar','navPurchases'],
+ ['customers','👤 الزبائن','👤 Müşteriler','navCustomers'],
+ ['suppliers','🏢 الموردون','🏢 Tedarikçiler','navSuppliers'],
+ ['debts','💳 الديون','💳 Borçlar','navDebts'],
+ ['addressBook','📒 دفتر العناوين','📒 Adres defteri','navAddressBook'],
+ ['statements','🧾 الكشوف','🧾 Ekstreler','navStatements'],
+ ['employees','👥 الموظفون والرواتب','👥 Personel ve maaş','navEmployees'],
+ ['expenses','💸 المصروفات','💸 Giderler','navExpenses'],
+ ['reports','📊 التقارير والإضافات','📊 Raporlar ve eklentiler','navAdditions'],
+ ['alerts','🔔 التنبيهات','🔔 Uyarılar','navAlerts'],
+ ['aboutProgram','ℹ️ عن البرنامج','ℹ️ Hakkında','navAbout'],
+ ['cloud','☁️ إعداد السحابة','☁️ Bulut ayarı','navCloud']
+];
+var ALL=PAGES.map(function(p){return p[0]});
+var ROLES={admin:['مدير','Yönetici'],accountant:['محاسب','Muhasebeci'],cashier:['مبيعات','Satış']};
+var PRESET={
+ admin:ALL.slice(),
+ accountant:ALL.filter(function(k){return k!=='cloud'}),
+ cashier:['home','items','productInventory','sales','returns','customers','addressBook','alerts','aboutProgram']
+};
+var PAGE_PERM={additions:'reports',currencies:'reports',reports:'reports',supplierReturns:'purchases'};
+function roleLabel(r){var x=ROLES[r]||[r,r];return T(x[0],x[1])}
+
+/* ---------- المستخدمون ---------- */
+var session=null;
+function users(){
+  if(typeof db==='undefined')return [];
+  if(!Array.isArray(db.users))db.users=[];
+  db.users.forEach(function(u){
+    if(!u.id)u.id='u_'+Date.now()+Math.random().toString(36).slice(2,6);
+    if(!ROLES[u.role])u.role='cashier';
+    if(u.active===undefined)u.active=true;
+    if(!Array.isArray(u.perms))u.perms=PRESET[u.role].slice();
+  });
+  if(!db.users.some(function(u){return !u.deleted&&u.active&&u.role==='admin'})){
+    var a=db.users.filter(function(u){return u.id==='admin'})[0];
+    if(a){a.deleted=false;a.active=true;a.role='admin';a.perms=ALL.slice()}
+    else db.users.unshift({id:'admin',name:'Administrator',role:'admin',active:true,perms:ALL.slice()});
+  }
+  return db.users;
+}
+function live(){return users().filter(function(u){return !u.deleted})}
+function actives(){return live().filter(function(u){return u.active})}
+function admins(){return actives().filter(function(u){return u.role==='admin'})}
+function isAdmin(){return !!(session&&session.role==='admin')}
+function can(k){if(!session)return true;if(session.role==='admin')return true;return (session.perms||[]).indexOf(k)>-1}
+window.alyUserName=function(){return session?session.name:'Administrator'};
+window.alyCan=can;
+function toast(msg){
+  try{var t=document.createElement('div');t.textContent=msg;t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#123454;color:#fff;padding:12px 20px;border-radius:12px;font-weight:800;z-index:2147483647;box-shadow:0 6px 20px rgba(0,0,0,.35);font-family:Cairo,sans-serif;max-width:90%;text-align:center';document.body.appendChild(t);setTimeout(function(){t.remove()},3000)}catch(e){}
+}
+function denied(){toast(T('⛔ ليست لديك صلاحية لهذا الإجراء','⛔ Bu işlem için yetkiniz yok'))}
+function audit(action){try{db.auditLog=Array.isArray(db.auditLog)?db.auditLog:[];db.auditLog.unshift({at:new Date().toISOString(),action:action,user:window.alyUserName()})}catch(e){}}
+function persist(){try{if(typeof save==='function')save();else S.setItem(KEY,JSON.stringify(db))}catch(e){console.warn(e)}}
+
+/* ---------- الرمز السري (PIN) ---------- */
+function b64(u){var s='';u.forEach(function(c){s+=String.fromCharCode(c)});return btoa(s)}
+function unb(s){return Uint8Array.from(atob(s),function(c){return c.charCodeAt(0)})}
+async function kdf(pin,salt,it){var k=await crypto.subtle.importKey('raw',new TextEncoder().encode(pin),'PBKDF2',false,['deriveBits']);return b64(new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:salt,iterations:it},k,256)))}
+async function makePin(pin){var s=crypto.getRandomValues(new Uint8Array(16));return {s:b64(s),it:100000,h:await kdf(pin,s,100000)}}
+function same(a,b){a=String(a);b=String(b);var d=a.length^b.length;for(var i=0;i<Math.max(a.length,b.length);i++)d|=(a.charCodeAt(i)||0)^(b.charCodeAt(i)||0);return d===0}
+async function checkPin(u,pin){if(!u.pin)return true;return same(await kdf(pin,unb(u.pin.s),u.pin.it||100000),u.pin.h)}
+function pinOk(p){return /^\d{4,12}$/.test(p)}
+function failInfo(id){var f=jget(FAILK,{});return f[id]||{n:0,until:0}}
+function setFail(id,v){var f=jget(FAILK,{});if(v)f[id]=v;else delete f[id];try{S.setItem(FAILK,JSON.stringify(f))}catch(e){}}
+
+/* ---------- تسجيل الدخول ---------- */
+function needPicker(){var a=actives();return a.length>1||a.some(function(u){return !!u.pin})}
+function enter(u,how){
+  session=u;
+  try{sessionStorage.setItem('aly_session_uid',u.id)}catch(e){}
+  audit((how||T('تسجيل دخول','Giriş'))+': '+u.name);persist();
+  $('alyPick').classList.remove('on');document.documentElement.classList.remove('aly-picking');
+  applyPerms();
+  try{var n=$('ymUn');if(n)n.textContent=u.name;var av=$('ymAv');if(av)av.textContent=(u.name||'?').trim().charAt(0).toUpperCase()}catch(e){}
+  var cur=document.querySelector('.page.active');
+  if(cur&&!can(PAGE_PERM[cur.id]||cur.id)){try{window.show('home',$('navHome'))}catch(e){}}
+  renderUsers();
+}
+function showPicker(){
+  var box=$('alyPick');users();
+  var list=actives();
+  box.innerHTML='<div class="ap-card"><h2>'+E(T('من يستخدم البرنامج؟','Programı kim kullanıyor?'))+'</h2><p class="ap-sub">'+E(T('اختر المستخدم للمتابعة','Devam etmek için kullanıcıyı seçin'))+'</p>'+
+   '<div class="ap-list" id="apList">'+list.map(function(u){return '<button type="button" class="ap-user" data-id="'+E(u.id)+'"><span class="ap-av">'+E((u.name||'?').trim().charAt(0).toUpperCase())+'</span><b>'+E(u.name)+'</b><small>'+E(roleLabel(u.role))+'</small></button>'}).join('')+'</div>'+
+   '<div class="ap-pin" id="apPin"><h2 id="apWho"></h2><input id="apPinIn" type="password" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="••••"><div class="ap-err" id="apErr"></div><button type="button" class="ap-btn" id="apGo">'+E(T('دخول','Giriş'))+'</button><button type="button" class="ap-btn alt" id="apBack">'+E(T('رجوع','Geri'))+'</button></div>'+
+   '<button type="button" class="ap-link" id="apForgot">'+E(T('نسيت الرمز؟ دخول المالك','PIN\'i mi unuttunuz? Sahip girişi'))+'</button></div>';
+  box.classList.add('on');document.documentElement.classList.add('aly-picking');
+  var chosen=null;
+  function pick(u){
+    if(!u.pin){enter(u);return}
+    chosen=u;$('apList').style.display='none';$('apPin').classList.add('on');$('apForgot').style.display='none';
+    $('apWho').textContent=u.name;$('apErr').textContent='';var i=$('apPinIn');i.value='';setTimeout(function(){i.focus()},50);
+  }
+  Array.prototype.forEach.call(box.querySelectorAll('.ap-user'),function(b){b.onclick=function(){var u=list.filter(function(x){return x.id===b.getAttribute('data-id')})[0];if(u)pick(u)}});
+  async function go(){
+    if(!chosen)return;var f=failInfo(chosen.id),w=Math.ceil((f.until-Date.now())/1000);
+    if(w>0){$('apErr').textContent=T('انتظر '+w+' ثانية قبل المحاولة','Denemeden önce '+w+' sn bekleyin');return}
+    var v=$('apPinIn').value.trim();
+    var ok=false;try{ok=await checkPin(chosen,v)}catch(e){}
+    if(ok){setFail(chosen.id,null);enter(chosen);return}
+    f.n++;if(f.n>=5)f.until=Date.now()+30000*(f.n-4);setFail(chosen.id,f);
+    $('apErr').textContent=T('الرمز غير صحيح','PIN hatalı')+(f.n>=5?' — '+T('تم تأخير المحاولات','denemeler geciktirildi'):'');
+    $('apPinIn').value='';
+  }
+  $('apGo').onclick=go;$('apPinIn').onkeydown=function(e){if(e.key==='Enter')go()};
+  $('apBack').onclick=function(){chosen=null;$('apPin').classList.remove('on');$('apList').style.display='';$('apForgot').style.display=''};
+  $('apForgot').onclick=async function(){
+    var rec=jget('alyaman_pw_v3',null);
+    if(!rec){alert(T('تعذّر التحقق: لا توجد كلمة مرور للبرنامج مسجّلة على هذا الجهاز.','Doğrulanamadı: bu cihazda program şifresi yok.'));return}
+    var pw=prompt(T('أدخل كلمة مرور البرنامج (كلمة مرور المالك):','Program (sahip) şifresini girin:'));
+    if(!pw)return;
+    var ok=false;try{ok=same(await kdf(pw,unb(rec.s),rec.it),rec.h)}catch(e){}
+    if(!ok){alert(T('كلمة المرور غير صحيحة','Şifre hatalı'));return}
+    var a=admins()[0];if(!a)return;
+    enter(a,T('دخول المالك','Sahip girişi'));toast(T('تم الدخول كمدير. يمكنك إعادة تعيين الرموز من إدارة المستخدمين.','Yönetici olarak girildi. PIN\'leri kullanıcı yönetiminden sıfırlayabilirsiniz.'));
+  };
+}
+function isLockedNow(){var c=document.documentElement.classList;return c.contains('sec-locked')||c.contains('app-is-locked')}
+function tick(){
+  if(typeof db==='undefined')return;
+  if(isLockedNow()){
+    if(session){session=null;try{sessionStorage.removeItem('aly_session_uid')}catch(e){}}
+    $('alyPick').classList.remove('on');document.documentElement.classList.remove('aly-picking');return;
+  }
+  if(session){
+    var u=live().filter(function(x){return x.id===session.id})[0];
+    if(!u||!u.active){session=null;} else {session=u}
+  }
+  if(!session){
+    users();
+    if(!needPicker()){enter(admins()[0]||live()[0],T('تسجيل دخول','Giriş'));return}
+    if(!$('alyPick').classList.contains('on'))showPicker();
+  }
+}
+
+/* ---------- تطبيق الصلاحيات ---------- */
+function applyPerms(){
+  PAGES.forEach(function(p){
+    var b=$(p[3]);if(!b)return;
+    var ok=can(p[0]);
+    if(!ok){if(!b.hasAttribute('data-ayperm')){b.setAttribute('data-ayperm',b.style.display||'-');}b.style.setProperty('display','none','important')}
+    else if(b.hasAttribute('data-ayperm')){var o=b.getAttribute('data-ayperm');b.style.removeProperty('display');if(o&&o!=='-')b.style.display=o;b.removeAttribute('data-ayperm')}
+  });
+  var ub=$('alyUsersBox');if(ub)ub.style.display=isAdmin()?'':'none';
+  var cd=$('btnClearData');if(cd)cd.style.display=isAdmin()?'':'none';
+}
+var _show=window.show;
+window.show=function(id){if(!can(PAGE_PERM[id]||id)){denied();return}return _show.apply(this,arguments)};
+['clearAll','restorePreClearA'].forEach(function(n){var f=window[n];if(typeof f==='function')window[n]=function(){if(!isAdmin()){denied();return}return f.apply(this,arguments)}});
+(function(){var f=window.openCloudSyncPanel;if(typeof f==='function')window.openCloudSyncPanel=function(){if(!can('cloud')){denied();return}return f.apply(this,arguments)}})();
+
+/* ---------- إدارة المستخدمين (واجهة المدير) ---------- */
+function ensureBox(){
+  var h=[].slice.call(document.querySelectorAll('#advancedAccounting h3')).filter(function(x){return x.textContent.indexOf('المستخدمون والصلاحيات')>-1})[0];
+  if(!h||$('alyUsersBox'))return;
+  var sec=h.parentNode,box=document.createElement('div');box.id='alyUsersBox';
+  var fg=h.nextElementSibling,pu=$('professionalUsers');
+  sec.insertBefore(box,h);box.appendChild(h);
+  if(fg&&fg.classList.contains('form-grid')){fg.innerHTML='<input id="proUserName" placeholder="اسم المستخدم"><input id="proUserPin" type="password" inputmode="numeric" maxlength="12" autocomplete="new-password" placeholder="الرمز السري (4-12 رقم)"><select id="proUserRole"><option value="cashier">مبيعات / Cashier</option><option value="accountant">محاسب / Accountant</option><option value="admin">مدير / Administrator</option></select><button class="primary" onclick="addProfessionalUser()">إضافة مستخدم</button>';box.appendChild(fg)}
+  if(pu)box.appendChild(pu);
+}
+function adminNoPin(){return admins().some(function(u){return !u.pin})&&actives().length>1}
+function renderUsers(){
+  ensureBox();var el=$('professionalUsers');if(!el)return;
+  var list=live(),warn='';
+  if(adminNoPin())warn='<div class="aly-warn">'+E(T('⚠️ يوجد مدير بدون رمز سري؛ أي شخص يستطيع الدخول به. عيّن له رمزًا من زر «تعديل».','⚠️ PIN\'siz bir yönetici var; herkes onunla girebilir. «Düzenle» ile PIN belirleyin.'))+'</div>';
+  el.innerHTML=warn+'<div style="overflow:auto"><table class="aly-ut"><tr><th>'+E(T('المستخدم','Kullanıcı'))+'</th><th>'+E(T('الصلاحية','Rol'))+'</th><th>'+E(T('الحالة','Durum'))+'</th><th></th></tr>'+
+   list.map(function(u){
+    var me=session&&session.id===u.id;
+    return '<tr><td><div class="u-name"><span class="aly-av">'+E((u.name||'?').trim().charAt(0).toUpperCase())+'</span><span>'+E(u.name)+(me?' <small style="color:#1c7a3d">('+E(T('أنت','siz'))+')</small>':'')+'</span></div></td>'+
+     '<td><span class="aly-badge '+(u.role==='admin'?'admin':'')+'">'+E(roleLabel(u.role))+'</span></td>'+
+     '<td><span class="aly-badge '+(u.active?'ok':'off')+'">'+E(u.active?T('مفعّل','Aktif'):T('موقوف','Durduruldu'))+'</span>'+(u.pin?'':' <small style="opacity:.6">'+E(T('بدون رمز','PIN yok'))+'</small>')+'</td>'+
+     '<td><div class="aly-ua"><button type="button" onclick="alyUserEdit(\''+E(u.id)+'\')">✏️ '+E(T('تعديل','Düzenle'))+'</button><button type="button" onclick="alyUserToggle(\''+E(u.id)+'\')">'+(u.active?'⏸ '+E(T('إيقاف','Durdur')):'▶ '+E(T('تفعيل','Etkinleştir')))+'</button><button type="button" class="dg" onclick="alyUserDelete(\''+E(u.id)+'\')">🗑 '+E(T('حذف','Sil'))+'</button></div></td></tr>';
+   }).join('')+'</table></div>';
+}
+window.renderProfessionalUsers=renderUsers;
+function lastAdminGuard(u){return u.role==='admin'&&u.active&&admins().length<=1}
+function nameTaken(n,exceptId){n=n.trim().toLowerCase();return live().some(function(u){return u.id!==exceptId&&String(u.name).trim().toLowerCase()===n})}
+window.addProfessionalUser=async function(){
+  if(!isAdmin())return denied();
+  var n=($('proUserName').value||'').trim(),r=$('proUserRole').value,p=($('proUserPin')?$('proUserPin').value:'').trim();
+  if(!n)return alert(T('أدخل اسم المستخدم','Kullanıcı adını girin'));
+  if(nameTaken(n))return alert(T('هذا الاسم مستخدم مسبقًا','Bu ad zaten kullanılıyor'));
+  if(!pinOk(p))return alert(T('الرمز السري يجب أن يكون من 4 إلى 12 رقمًا','PIN 4-12 haneli rakam olmalı'));
+  var u={id:'u_'+Date.now(),name:n,role:r,active:true,perms:PRESET[r].slice(),createdAt:new Date().toISOString(),pin:await makePin(p)};
+  users().push(u);audit((T('إضافة مستخدم','Kullanıcı eklendi'))+': '+n+' ('+r+')');persist();
+  $('proUserName').value='';if($('proUserPin'))$('proUserPin').value='';
+  renderUsers();try{renderProfessionalAudit()}catch(e){}
+  if(adminNoPin()){var a=admins().filter(function(x){return !x.pin})[0];alert(T('تنبيه: المدير «'+a.name+'» بدون رمز سري. سيتم فتح نافذة التعديل لتعيين رمز له.','Uyarı: «'+a.name+'» yöneticisinin PIN\'i yok. PIN belirlemek için düzenleme penceresi açılacak.'));window.alyUserEdit(a.id)}
+};
+window.alyUserToggle=function(id){
+  if(!isAdmin())return denied();
+  var u=live().filter(function(x){return x.id===id})[0];if(!u)return;
+  if(u.active&&lastAdminGuard(u))return alert(T('لا يمكن إيقاف آخر مدير','Son yönetici durdurulamaz'));
+  if(session&&session.id===id&&u.active)return alert(T('لا يمكنك إيقاف حسابك الحالي','Mevcut hesabınızı durduramazsınız'));
+  u.active=!u.active;audit((u.active?T('تفعيل مستخدم','Kullanıcı etkinleştirildi'):T('إيقاف مستخدم','Kullanıcı durduruldu'))+': '+u.name);persist();renderUsers();try{renderProfessionalAudit()}catch(e){}
+};
+window.alyUserDelete=function(id){
+  if(!isAdmin())return denied();
+  var u=live().filter(function(x){return x.id===id})[0];if(!u)return;
+  if(lastAdminGuard(u))return alert(T('لا يمكن حذف آخر مدير','Son yönetici silinemez'));
+  if(session&&session.id===id)return alert(T('لا يمكنك حذف حسابك الحالي','Mevcut hesabınızı silemezsiniz'));
+  if(!confirm(T('حذف المستخدم «'+u.name+'»؟','«'+u.name+'» kullanıcısı silinsin mi?')))return;
+  u.deleted=true;u.active=false;audit(T('حذف مستخدم','Kullanıcı silindi')+': '+u.name);persist();renderUsers();try{renderProfessionalAudit()}catch(e){}
+};
+window.alyUserEdit=function(id){
+  if(!isAdmin())return denied();
+  var u=live().filter(function(x){return x.id===id})[0];if(!u)return;
+  var m=$('alyUM');
+  m.innerHTML='<div class="um-card"><h3>✏️ '+E(T('تعديل المستخدم','Kullanıcıyı düzenle'))+'</h3>'+
+   '<label>'+E(T('الاسم','Ad'))+'</label><input type="text" id="umName" value="'+E(u.name)+'">'+
+   '<label>'+E(T('الصلاحية (الدور)','Rol'))+'</label><select id="umRole">'+Object.keys(ROLES).map(function(r){return '<option value="'+r+'"'+(u.role===r?' selected':'')+'>'+E(roleLabel(r))+'</option>'}).join('')+'</select>'+
+   '<label>'+E(T('رمز سري جديد (اتركه فارغًا دون تغيير)','Yeni PIN (değiştirmemek için boş bırakın)'))+'</label><input type="password" id="umPin" inputmode="numeric" maxlength="12" autocomplete="new-password" placeholder="4-12">'+
+   '<label>'+E(T('الأقسام المسموح بها','İzin verilen bölümler'))+'</label><div class="um-perms" id="umPerms">'+PAGES.map(function(p){return '<label><input type="checkbox" value="'+p[0]+'"'+((u.role==='admin'||(u.perms||[]).indexOf(p[0])>-1)?' checked':'')+'><span>'+E(T(p[1],p[2]))+'</span></label>'}).join('')+'</div>'+
+   '<div class="um-err" id="umErr"></div><div class="um-row"><button type="button" class="um-ok" id="umSave">'+E(T('حفظ','Kaydet'))+'</button><button type="button" class="um-no" id="umCancel">'+E(T('إلغاء','İptal'))+'</button></div></div>';
+  m.classList.add('on');
+  function syncPerms(){
+    var r=$('umRole').value;
+    Array.prototype.forEach.call($('umPerms').querySelectorAll('input'),function(c){c.disabled=(r==='admin');if(r==='admin')c.checked=true})
+  }
+  $('umRole').onchange=function(){var r=$('umRole').value;Array.prototype.forEach.call($('umPerms').querySelectorAll('input'),function(c){c.disabled=false;c.checked=PRESET[r].indexOf(c.value)>-1});syncPerms()};
+  syncPerms();
+  $('umCancel').onclick=function(){m.classList.remove('on')};
+  $('umSave').onclick=async function(){
+    var n=$('umName').value.trim(),r=$('umRole').value,p=$('umPin').value.trim(),er=$('umErr');
+    if(!n){er.textContent=T('أدخل الاسم','Ad girin');return}
+    if(nameTaken(n,u.id)){er.textContent=T('هذا الاسم مستخدم مسبقًا','Bu ad zaten kullanılıyor');return}
+    if(p&&!pinOk(p)){er.textContent=T('الرمز من 4 إلى 12 رقمًا','PIN 4-12 haneli olmalı');return}
+    if(u.role==='admin'&&r!=='admin'&&lastAdminGuard(u)){er.textContent=T('لا يمكن تغيير دور آخر مدير','Son yöneticinin rolü değiştirilemez');return}
+    var perms=r==='admin'?ALL.slice():[].slice.call($('umPerms').querySelectorAll('input:checked')).map(function(c){return c.value});
+    if(perms.indexOf('home')<0)perms.push('home');
+    u.name=n;u.role=r;u.perms=perms;
+    if(p){u.pin=await makePin(p);setFail(u.id,null)}
+    audit(T('تعديل مستخدم','Kullanıcı düzenlendi')+': '+n);persist();m.classList.remove('on');
+    if(session&&session.id===u.id){session=u;applyPerms()}
+    renderUsers();try{renderProfessionalAudit()}catch(e){}
+  };
+};
+
+/* ---------- تشغيل ---------- */
+function init(){ensureBox();users();renderUsers();applyPerms()}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+setTimeout(init,900);
+setInterval(tick,400);
+setInterval(function(){if(session)applyPerms()},2000);
 })();
 </script>
