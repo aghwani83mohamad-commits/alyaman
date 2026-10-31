@@ -3519,16 +3519,16 @@ function bcPick(m){
     <h2>🧾 الفواتير</h2>
     <div class="menu-grid" id="invGroups">
       <button type="button" data-inv-group="purchase" onclick="ymInvGroup('purchase')"><span>🔐</span>فواتير الشراء</button>
-      <button type="button" data-inv-group="sales" class="active" onclick="ymInvGroup('sales')"><span>🛒</span>فواتير المبيعات</button>
+      <button type="button" data-inv-group="sales" onclick="ymInvGroup('sales')"><span>🛒</span>فواتير المبيعات</button>
     </div>
     <div class="menu-grid" id="invTabs">
-      <button type="button" data-inv-group="sales" data-inv-tab="trade" data-inv-mode="sale" class="active" onclick="invPick('sale')"><span>🛒</span>فواتير المبيعات</button>
+      <button type="button" data-inv-group="sales" data-inv-tab="trade" data-inv-mode="sale" onclick="invPick('sale')"><span>🛒</span>فواتير المبيعات</button>
       <button type="button" data-inv-group="sales" data-inv-tab="cret" data-inv-mode="cret" onclick="invPick('cret')"><span>↩️</span>مرتجع الزبون</button>
       <button type="button" data-inv-group="purchase" data-inv-tab="trade" data-inv-mode="purchase" onclick="invPick('purchase')" style="display:none"><span>🛍️</span>فواتير المشتريات</button>
       <button type="button" data-inv-group="purchase" data-inv-tab="supp" data-inv-mode="supp" onclick="invPick('supp')" style="display:none"><span>🏢</span>فواتير الموردين</button>
       <button type="button" data-inv-group="purchase" data-inv-tab="sret" data-inv-mode="sret" onclick="invPick('sret')" style="display:none"><span>🚚</span>مراجع الموردين</button>
     </div>
-    <style>#invTypeWrap{display:none!important}#invGroups button.active{outline:2px solid currentColor}</style>
+    <style>#invoicesSection.inv-nogroup>*:not(h2):not(#invGroups){display:none!important}#invTypeWrap{display:none!important}#invGroups button.active{outline:2px solid currentColor}</style>
     <div class="row">
       <div><label>🏬 المتجر</label><select id="invStore" onchange="renderInvoices()"><option value="">كل المتاجر</option></select></div>
       <div><label>رقم الفاتورة</label><input id="invNo" placeholder="ابحث برقم الفاتورة" oninput="renderInvoices()"></div>
@@ -10159,6 +10159,7 @@ div[id$="List"] table,div[id$="list"] table{margin-bottom:2px}
   /* مجموعات الفواتير: فواتير الشراء (بكلمة مرور) / فواتير المبيعات */
   var ymPurchUnlocked=false, ymPurchBusy=false;
   function ymShowGroup(g){
+    var sec=$('invoicesSection'); if(sec) sec.classList.remove('inv-nogroup');
     document.querySelectorAll('#invGroups button').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-inv-group')===g)});
     document.querySelectorAll('#invTabs button').forEach(function(b){b.style.display=b.getAttribute('data-inv-group')===g?'':'none'});
     window.invPick(g==='purchase'?'purchase':'sale');
@@ -10183,10 +10184,10 @@ div[id$="List"] table,div[id$="list"] table{margin-bottom:2px}
     ymShowGroup('purchase');
   };
   new MutationObserver(function(){
-    if(document.documentElement.classList.contains('sec-locked')){ ymPurchUnlocked=false; ymShowGroup('sales'); }
+    if(document.documentElement.classList.contains('sec-locked')){ ymPurchUnlocked=false; ymInvInit(); }
   }).observe(document.documentElement,{attributes:true,attributeFilter:['class']});
   /* الحالة الابتدائية: فواتير المبيعات فقط (لا تظهر فواتير الشراء قبل كلمة المرور) */
-  function ymInvInit(){ try{ ymShowGroup('sales'); }catch(e){} }
+  function ymInvInit(){ try{ ymShowGroup('sales'); document.querySelectorAll('#invGroups button').forEach(function(b){b.classList.remove('active')}); var sec=$('invoicesSection'); if(sec) sec.classList.add('inv-nogroup'); }catch(e){} }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(ymInvInit,0)}); else setTimeout(ymInvInit,0);
 
   /* ---------- سندات القبض / الدفع ---------- */
