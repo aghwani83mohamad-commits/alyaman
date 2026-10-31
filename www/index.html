@@ -10165,6 +10165,10 @@ div[id$="List"] table,div[id$="list"] table{margin-bottom:2px}
     window.invPick(g==='purchase'?'purchase':'sale');
   }
   window.ymInvGroup=async function(g){
+    var _sec=$('invoicesSection'), _btn=document.querySelector('#invGroups button[data-inv-group="'+g+'"]');
+    if(_sec && _btn && _btn.classList.contains('active') && !_sec.classList.contains('inv-nogroup')){
+      ymPurchUnlocked=false; ymInvInit(); return;
+    }
     if(g!=='purchase'){ ymPurchUnlocked=false; ymShowGroup('sales'); return; }
     if(ymPurchBusy) return;
     if(!ymPurchUnlocked){
