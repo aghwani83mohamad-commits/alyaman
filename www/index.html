@@ -4543,10 +4543,25 @@ function ymStoreBkGet(){ try{ const a=JSON.parse(localStorage.getItem(YM_STORE_B
 function ymStoreBkSet(a){ try{ const g=JSON.stringify(a); if(g!==ymStoreBkSig){ ymStoreBkSig=g; localStorage.setItem(YM_STORE_BK,g); } }catch(e){} }
 function ymRawStores(){
   const s=db&&db.settings&&db.settings.stores;
-  if(Array.isArray(s)&&s.length){ ymStoreBkSet(s); return s.slice(0,YM_MAX_STORES); }
-  const bk=ymStoreBkGet(); if(bk) return bk.slice(0,YM_MAX_STORES);
-  return YM_DEFAULT_STORES.slice();
+  if(Array.isArray(s)&&s.length){ ymStoreBkSet(s); return ymParentName(s.slice(0,YM_MAX_STORES)); }
+  const bk=ymStoreBkGet(); if(bk) return ymParentName(bk.slice(0,YM_MAX_STORES));
+  return ymParentName(YM_DEFAULT_STORES.slice());
 }
+/* المتجر الأول = المالك: اسمه الافتراضي اسم الشركة (اليمان للتجارة) بدل «المتجر الأم»،
+   إلا إذا كانت هناك سجلات قديمة مختومة بالاسم القديم فنُبقيه حتى لا ينفصل عنها */
+const YM_OLD_PARENT='المتجر الأم';
+let ymLegacyCache={t:0,v:false};
+function ymLegacyParentUsed(){
+  const n=Date.now(); if(n-ymLegacyCache.t<5000) return ymLegacyCache.v;
+  let v=false;
+  try{ v=YM_STORE_ARRAYS.concat(['items','employees','customers','suppliers','users']).some(k=>(db[k]||[]).some(r=>r&&r.store===YM_OLD_PARENT)); }catch(e){}
+  ymLegacyCache={t:n,v}; return v;
+}
+function ymParentDefault(){
+  if(ymLegacyParentUsed()) return YM_OLD_PARENT;
+  return (db&&db.settings&&String(db.settings.companyName||'').trim())||'اليمان للتجارة';
+}
+function ymParentName(a){ if(a.length&&(a[0]==null||String(a[0]).trim()===''||String(a[0]).trim()===YM_OLD_PARENT)) a[0]=ymParentDefault(); return a; }
 /* استرجاع أسماء المتاجر الضائعة من آخر نسخة سحابية محفوظة على الجهاز (إن وُجدت) */
 let ymStoreRecoverTried=false;
 function ymStoreLooksCustom(a){ return Array.isArray(a)&&a.some(n=>String(n||'').trim()); }
@@ -4571,7 +4586,7 @@ async function ymRecoverStoreNames(){
   }catch(e){ console.warn('store names recovery failed',e); }
 }
 setInterval(()=>{ try{ ymRecoverStoreNames(); }catch(e){} },3000);
-function ymStoreFallback(i){ return i===0?'المتجر الأم':'المتجر '+(i+1); }
+function ymStoreFallback(i){ return i===0?ymParentDefault():'المتجر '+(i+1); }
 function ymStoreList(){ return ymRawStores().map((n,i)=>String(n==null?'':n).trim()||ymStoreFallback(i)); }
 const YM_STORE_ARRAYS=['sales','purchases','returns','supplierReturns','expenses','customerPayments','supplierPayments','stockAdjustments','cashMovements','salaryTransactions','stocktakes'];
 const ymKnownIds={};
