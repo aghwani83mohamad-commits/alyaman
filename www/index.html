@@ -12282,13 +12282,13 @@ function renderUsers(){
   ensureBox();try{fillStoreSel()}catch(e){}var el=$('professionalUsers');if(!el)return;
   var list=live(),warn='';
   if(adminNoPin())warn='<div class="aly-warn">'+E(T('⚠️ يوجد مدير بدون رمز سري؛ أي شخص يستطيع الدخول به. عيّن له رمزًا من زر «تعديل».','⚠️ PIN\'siz bir yönetici var; herkes onunla girebilir. «Düzenle» ile PIN belirleyin.'))+'</div>';
-  el.innerHTML=warn+'<div style="overflow:auto"><table class="aly-ut"><tr><th>'+E(T('المستخدم','Kullanıcı'))+'</th><th>'+E(T('الصلاحية','Rol'))+'</th><th>'+E(T('الحالة','Durum'))+'</th><th></th></tr>'+
+  el.innerHTML=warn+'<div style="margin:0 0 10px"><button type="button" class="aly-ownerpw" onclick="alyOwnerPw()" style="padding:8px 14px;border:1px solid #d5dde5;border-radius:10px;background:#fff;color:#123454;font-family:inherit;font-weight:800;cursor:pointer">🔐 '+E(T('تغيير كلمة مرور المالك (كل المتاجر)','Sahip şifresini değiştir (tüm mağazalar)'))+'</button></div><div style="overflow:auto"><table class="aly-ut"><tr><th>'+E(T('المستخدم','Kullanıcı'))+'</th><th>'+E(T('الصلاحية','Rol'))+'</th><th>'+E(T('الحالة','Durum'))+'</th><th></th></tr>'+
    list.map(function(u){
     var me=session&&session.id===u.id;
     return '<tr><td><div class="u-name"><span class="aly-av">'+E((u.name||'?').trim().charAt(0).toUpperCase())+'</span><span>'+E(u.name)+(me?' <small style="color:#1c7a3d">('+E(T('أنت','siz'))+')</small>':'')+'</span></div></td>'+
      '<td><span class="aly-badge '+(u.role==='admin'?'admin':'')+'">'+E(roleLabel(u.role))+'</span>'+(u.role!=='admin'&&u.store?' <span class="aly-badge">🏬 '+E(u.store)+'</span>':'')+'</td>'+
      '<td><span class="aly-badge '+(u.active?'ok':'off')+'">'+E(u.active?T('مفعّل','Aktif'):T('موقوف','Durduruldu'))+'</span>'+(u.pin?'':' <small style="opacity:.6">'+E(T('بدون رمز','PIN yok'))+'</small>')+accBadge(u)+'</td>'+
-     '<td><div class="aly-ua"><button type="button" onclick="alyUserEdit(\''+E(u.id)+'\')">✏️ '+E(T('تعديل','Düzenle'))+'</button><button type="button" onclick="alyUserToggle(\''+E(u.id)+'\')">'+(u.active?'⏸ '+E(T('إيقاف','Durdur')):'▶ '+E(T('تفعيل','Etkinleştir')))+'</button><button type="button" class="dg" onclick="alyUserDelete(\''+E(u.id)+'\')">🗑 '+E(T('حذف','Sil'))+'</button></div></td></tr>';
+     '<td><div class="aly-ua"><button type="button" onclick="alyUserEdit(\''+E(u.id)+'\')">✏️ '+E(T('تعديل','Düzenle'))+'</button><button type="button" onclick="alyUserPwChange(\''+E(u.id)+'\')">🔑 '+E(T('تغيير كلمة السر','Şifre değiştir'))+'</button><button type="button" onclick="alyUserPwRemove(\''+E(u.id)+'\')">🚫 '+E(T('إلغاء كلمة السر','Şifreyi kaldır'))+'</button><button type="button" onclick="alyUserToggle(\''+E(u.id)+'\')">'+(u.active?'⏸ '+E(T('إيقاف','Durdur')):'▶ '+E(T('تفعيل','Etkinleştir')))+'</button><button type="button" class="dg" onclick="alyUserDelete(\''+E(u.id)+'\')">🗑 '+E(T('حذف','Sil'))+'</button></div></td></tr>';
    }).join('')+'</table></div>';
 }
 window.renderProfessionalUsers=renderUsers;
@@ -12326,6 +12326,47 @@ window.alyUserDelete=function(id){
   if(session&&session.id===id)return alert(T('لا يمكنك حذف حسابك الحالي','Mevcut hesabınızı silemezsiniz'));
   if(!confirm(T('حذف المستخدم «'+u.name+'»؟','«'+u.name+'» kullanıcısı silinsin mi?')))return;
   u.deleted=true;u.active=false;audit(T('حذف مستخدم','Kullanıcı silindi')+': '+u.name);persist();renderUsers();try{renderProfessionalAudit()}catch(e){}
+};
+window.alyOwnerPw=async function(){
+  if(!isAdmin())return denied();
+  if(typeof window.alyamanChangeOwnerPassword!=='function')return alert(T('غير متاح','Kullanılamıyor'));
+  try{await window.alyamanChangeOwnerPassword()}catch(e){console.error(e)}
+};
+window.alyUserPwChange=function(id){
+  if(!isAdmin())return denied();
+  var u=live().filter(function(x){return x.id===id})[0];if(!u)return;
+  var wantAcc=needsAcc(u),m=$('alyUM');
+  m.innerHTML='<div class="um-card"><h3>🔑 '+E(T('تغيير كلمة السر','Şifre değiştir'))+' — '+E(u.name)+(u.store&&u.role!=='admin'?' ('+E(u.store)+')':'')+'</h3>'+
+   '<label>'+E(T('كلمة السر الجديدة','Yeni şifre'))+'</label><input type="password" id="pwNew" maxlength="32" autocomplete="new-password" placeholder="'+E(wantAcc?T('8 أحرف على الأقل، أحرف وأرقام','En az 8 karakter, harf ve rakam'):T('4 إلى 12 رقمًا','4-12 rakam'))+'">'+
+   '<label>'+E(T('تأكيد كلمة السر','Şifre tekrar'))+'</label><input type="password" id="pwNew2" maxlength="32" autocomplete="new-password">'+
+   '<div class="um-err" id="pwErrBox"></div><div class="um-row"><button type="button" class="um-ok" id="pwSave">'+E(T('حفظ','Kaydet'))+'</button><button type="button" class="um-no" id="pwCancel">'+E(T('إلغاء','İptal'))+'</button></div></div>';
+  m.classList.add('on');
+  $('pwCancel').onclick=function(){m.classList.remove('on')};
+  $('pwSave').onclick=async function(){
+    var p=$('pwNew').value.trim(),p2=$('pwNew2').value.trim(),er=$('pwErrBox');
+    if(!p){er.textContent=T('أدخل كلمة السر','Şifre girin');return}
+    if(p!==p2){er.textContent=T('كلمتا السر غير متطابقتين','Şifreler eşleşmiyor');return}
+    var pe=wantAcc?pwErr(p):(pinOk(p)?'':T('الرمز من 4 إلى 12 رقمًا','PIN 4-12 haneli olmalı'));if(pe){er.textContent=pe;return}
+    var ent=null;if(wantAcc){ent=await buildAccess(p);if(!ent)return}
+    u.pin=await makePin(p);setFail(u.id,null);
+    if(ent)putAccess(u.id,u.store,ent);
+    audit(T('تغيير كلمة سر مستخدم','Kullanıcı şifresi değiştirildi')+': '+u.name);persist();m.classList.remove('on');renderUsers();
+    toast(T('تم تغيير كلمة السر','Şifre değiştirildi'));
+  };
+};
+window.alyUserPwRemove=function(id){
+  if(!isAdmin())return denied();
+  var u=live().filter(function(x){return x.id===id})[0];if(!u)return;
+  if(u.role==='admin'&&actives().length>1)return alert(T('لا يمكن إلغاء كلمة سر المدير وهناك مستخدمون آخرون (يستطيع أي شخص الدخول به). أوقف المستخدمين الآخرين أولًا.','Başka kullanıcılar varken yönetici şifresi kaldırılamaz. Önce diğer kullanıcıları durdurun.'));
+  if(!u.pin&&!hasAccess(u.id))return alert(T('هذا المستخدم بدون كلمة سر أصلًا','Bu kullanıcının zaten şifresi yok'));
+  var msg=needsAcc(u)
+    ?T('إلغاء كلمة سر «'+u.name+'»؟ لن يستطيع الدخول إلى «'+u.store+'» من شاشة القفل؛ يدخل المالك بكلمة مرور المالك ويختاره من القائمة، أو عيّن له كلمة سر جديدة لاحقًا.','«'+u.name+'» şifresi kaldırılsın mı? Kilit ekranından «'+u.store+'» girişi kapanır; sahip girip kullanıcıyı seçebilir veya yeni şifre belirleyebilirsiniz.')
+    :T('إلغاء كلمة سر «'+u.name+'»؟','«'+u.name+'» şifresi kaldırılsın mı?');
+  if(!confirm(msg))return;
+  delete u.pin;setFail(u.id,null);
+  var r=getReg();r.acc=r.acc.filter(function(a){return a.u!==u.id});setReg(r);
+  audit(T('إلغاء كلمة سر مستخدم','Kullanıcı şifresi kaldırıldı')+': '+u.name);persist();renderUsers();
+  toast(T('تم إلغاء كلمة السر','Şifre kaldırıldı'));
 };
 window.alyUserEdit=function(id){
   if(!isAdmin())return denied();
@@ -12545,6 +12586,8 @@ function syncAccess(){
   var out={v:1,stores:names,acc:acc};
   if(JSON.stringify(out)!==JSON.stringify(reg))setReg(out);
 }
+function lockNames(){var all=getReg().stores,acc=getReg().acc;return all.filter(function(n,i){return i>0||acc.some(function(a){return a.st===n})})}
+function ownerLbl(){var n=getReg().stores[0];return n?T('🏢 '+n+' — المالك (كل المتاجر)','🏢 '+n+' — Sahip (tüm mağazalar)'):T('🏢 المالك — كل المتاجر','🏢 Sahip — tüm mağazalar')}
 function pickedStore(){var b=$('alyLockStoreBox');if(!b||b.style.display==='none')return '';return (lockStore&&getReg().stores.indexOf(lockStore)>-1)?lockStore:''}
 async function resolveLogin(pw){
   lastErr='';var st=pickedStore();if(!st)return null;
@@ -12582,12 +12625,12 @@ document.addEventListener('click',function(e){if(e.target&&e.target.closest&&e.t
 
 function paintLockHelp(){
   var h=$('alyLockStoreHelp');if(!h)return;
-  var t=lockStore?T('أدخل كلمة السر الخاصة بالمتجر «'+lockStore+'»','«'+lockStore+'» mağazasının şifresini girin'):T('أدخل كلمة مرور المالك لفتح كل المتاجر','Tüm mağazalar için sahip şifresini girin');
+  var t=lockStore?T('أدخل كلمة السر الخاصة بالمتجر «'+lockStore+'»','«'+lockStore+'» mağazasının şifresini girin'):T('أدخل كلمة مرور المالك لفتح كل المتاجر (يشمل '+(getReg().stores[0]||'')+')','Tüm mağazalar için sahip şifresini girin');
   if(h.textContent!==t)h.textContent=t;
 }
 function lockStoreUI(){
   var card=document.querySelector('#appLock .lock-card');if(!card)return;
-  var names=getReg().stores,box=$('alyLockStoreBox');
+  var names=lockNames(),box=$('alyLockStoreBox');
   var sec=window.alyamanSec,mode=(sec&&sec.mode)?sec.mode():'login';
   if(!box){
     box=document.createElement('div');box.id='alyLockStoreBox';
@@ -12599,13 +12642,13 @@ function lockStoreUI(){
       var er=$('lockError');if(er)er.textContent='';
     };
   }
-  var show=names.length>1&&mode==='login';
+  var show=getReg().stores.length>1&&mode==='login';
   box.style.display=show?'':'none';
   if(!show)return;
   if(names.indexOf(lockStore)<0)lockStore='';
-  var sig=names.join('\u0001')+'|'+T('a','t')+'|'+lockStore,sel=$('alyLockStore');
+  var sig=names.join('\u0001')+'|'+ownerLbl()+'|'+T('a','t')+'|'+lockStore,sel=$('alyLockStore');
   if(sel.getAttribute('data-sig')!==sig){
-    sel.innerHTML='<option value="">'+E(T('🏢 المالك — كل المتاجر','🏢 Sahip — tüm mağazalar'))+'</option>'+names.map(function(n){return '<option value="'+E(n)+'">🏬 '+E(n)+'</option>'}).join('');
+    sel.innerHTML='<option value="">'+E(ownerLbl())+'</option>'+names.map(function(n){return '<option value="'+E(n)+'">🏬 '+E(n)+'</option>'}).join('');
     sel.value=lockStore;sel.setAttribute('data-sig',sig);
     $('alyLockStoreLbl').textContent=T('اختر المتجر','Mağazayı seçin');
   }
