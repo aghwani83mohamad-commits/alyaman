@@ -6757,7 +6757,9 @@ function clearAll() {
       supplierReturns: [], areaStatements: [], stocktakes: [], cancelledSales: [], expenseCategories: [],
       backupHistory: [], stockAdjustments: [], invoiceEdits: [],
       users: [{id:'admin', name:'Administrator', role:'admin'}],
-      settings: {companyName:'اليمان للتجارة', fiscalCurrency:'', defaultCurrency:'SYP', autoBackup:true}
+      // أسماء المتاجر تبقى بعد مسح البيانات (لا تعود للأسماء الافتراضية)
+      settings: Object.assign({companyName:'اليمان للتجارة', fiscalCurrency:'', defaultCurrency:'SYP', autoBackup:true},
+        (db && db.settings && Array.isArray(db.settings.stores) && db.settings.stores.length) ? {stores: db.settings.stores.slice()} : {})
     };
 
     localStorage.removeItem(KEY);
