@@ -4536,7 +4536,41 @@ const YM_DEFAULT_STORES=['المتجر الأم','المتجر الثاني'];
 const YM_STORE_COLORS=['#1e6a3a','#a16207','#1d4ed8','#9d174d','#6d28d9','#0f766e','#b45309','#be123c','#4d7c0f','#475569'];
 const YM_MAX_STORES=10;
 window.__ymCurStore=null;
-function ymRawStores(){ const s=db&&db.settings&&db.settings.stores; return (Array.isArray(s)&&s.length)?s.slice(0,YM_MAX_STORES):YM_DEFAULT_STORES.slice(); }
+/* نسخة احتياطية لأسماء المتاجر خارج قاعدة البيانات: تنجو من مسح البيانات والمزامنة والاستعادة */
+const YM_STORE_BK='ym_store_names_v1';
+let ymStoreBkSig=null;
+function ymStoreBkGet(){ try{ const a=JSON.parse(localStorage.getItem(YM_STORE_BK)||'null'); return (Array.isArray(a)&&a.length)?a:null; }catch(e){ return null; } }
+function ymStoreBkSet(a){ try{ const g=JSON.stringify(a); if(g!==ymStoreBkSig){ ymStoreBkSig=g; localStorage.setItem(YM_STORE_BK,g); } }catch(e){} }
+function ymRawStores(){
+  const s=db&&db.settings&&db.settings.stores;
+  if(Array.isArray(s)&&s.length){ ymStoreBkSet(s); return s.slice(0,YM_MAX_STORES); }
+  const bk=ymStoreBkGet(); if(bk) return bk.slice(0,YM_MAX_STORES);
+  return YM_DEFAULT_STORES.slice();
+}
+/* استرجاع أسماء المتاجر الضائعة من آخر نسخة سحابية محفوظة على الجهاز (إن وُجدت) */
+let ymStoreRecoverTried=false;
+function ymStoreLooksCustom(a){ return Array.isArray(a)&&a.some(n=>String(n||'').trim()); }
+async function ymRecoverStoreNames(){
+  if(ymStoreRecoverTried) return;
+  try{
+    if(!db||!db.settings||ymStoreLooksCustom(db.settings.stores)||ymStoreBkGet()) { ymStoreRecoverTried=true; return; }
+    const V=window.alyamanVault; if(V&&V.ready&&!V.ready()) return;   // القفل مغلق: نعيد المحاولة لاحقاً
+    ymStoreRecoverTried=true;
+    let found=null;
+    try{ const st=await cbGet(); const a=st&&st.payload&&st.payload.settings&&st.payload.settings.stores; if(ymStoreLooksCustom(a)) found=a; }catch(e){}
+    if(!found){
+      try{ for(let i=0;i<localStorage.length&&!found;i++){ const k=localStorage.key(i); if(!k||k.indexOf(KEY)!==0) continue;
+        const raw=localStorage.getItem(k); if(!raw||raw.charAt(0)!=='{') continue;
+        const o=JSON.parse(raw), d=(o&&o.db)||o, a=d&&d.settings&&d.settings.stores; if(ymStoreLooksCustom(a)) found=a; } }catch(e){}
+    }
+    if(found){
+      db.settings.stores=found.slice(0,YM_MAX_STORES); ymStoreBkSet(db.settings.stores);
+      save(); try{ ymFillStoreSelects(); ymStoreSettingsInit(); render(); }catch(e){}
+      alert('تم استرجاع أسماء المتاجر: '+ymStoreList().join('، '));
+    }
+  }catch(e){ console.warn('store names recovery failed',e); }
+}
+setInterval(()=>{ try{ ymRecoverStoreNames(); }catch(e){} },3000);
 function ymStoreFallback(i){ return i===0?'المتجر الأم':'المتجر '+(i+1); }
 function ymStoreList(){ return ymRawStores().map((n,i)=>String(n==null?'':n).trim()||ymStoreFallback(i)); }
 const YM_STORE_ARRAYS=['sales','purchases','returns','supplierReturns','expenses','customerPayments','supplierPayments','stockAdjustments','cashMovements','salaryTransactions','stocktakes'];
