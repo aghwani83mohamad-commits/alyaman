@@ -12554,6 +12554,7 @@ function enforceSelects(){
   window.__ymCurStore=ms;
   var names=storeList();
   document.querySelectorAll('select').forEach(function(sel){
+    if(sel.classList&&sel.classList.contains('ym-move-sel'))return;  /* قوائم «نقل إلى متجر»: لا تُغيَّر تلقائيًا (كانت تُطلق رسالة عدم الصلاحية أو تنقل السجلات) */
     var o=[].slice.call(sel.options);if(!o.length)return;
     var hasStore=o.some(function(x){return names.indexOf(x.value)>-1});if(!hasStore)return;
     if(!o.every(function(x){return x.value===''||x.value==='__all'||names.indexOf(x.value)>-1}))return;
